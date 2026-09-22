@@ -1,0 +1,24 @@
+# Build artifacts & binaries
+build/
+*.3dsx
+*.elf
+*.smdh
+*.cia
+*.3ds
+*.t3x
+*.o
+*.d
+*.bin
+
+# AI agent instructions & rules
+.agents/
+GEMINI.md
+EXAMPLES.md
+
+# Editor & IDE configurations
+.vscode/
+.clangd
+
+# OS generated files
+.DS_Store
+Thumbs.db
