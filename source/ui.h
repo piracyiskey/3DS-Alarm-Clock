@@ -109,7 +109,11 @@ void ui_draw_tab_bar(C2D_TextBuf buf, AppMode active);
 typedef struct {
     float scroll_y;
     float touch_start_y;
+    float touch_start_x;
     bool  is_dragging;
+    bool  potential_tap;
+    int   candidate_index;
+    bool  candidate_is_toggle;
     int   selected_index;
 } AlarmListState;
 
@@ -118,7 +122,7 @@ void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode, u8 ringto
 void ui_draw_alarm_delete_confirm(C2D_TextBuf buf);
 void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode, u32 frame_counter);
 void ui_draw_alarm_ringing_bottom(C2D_TextBuf buf, int h, int m, u8 repeat_mode);
-void ui_draw_alarm_missed_modal(C2D_TextBuf buf);
+void ui_draw_alarm_missed_modal(C2D_TextBuf buf, int missed_count);
 void ui_draw_clock_bottom(C2D_TextBuf buf);
 void ui_draw_stopwatch_idle(C2D_TextBuf buf);
 void ui_draw_stopwatch_running(C2D_TextBuf buf);

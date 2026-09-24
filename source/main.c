@@ -25,6 +25,16 @@ static u32* SOC_buffer = NULL;
 
 static void socShutdown(void) { socExit(); }
 
+static aptHookCookie apt_cookie;
+
+static void apt_hook_callback(APT_HookType hook, void* param) {
+    (void)param;
+    if (hook == APTHOOK_ONRESTORE || hook == APTHOOK_ONWAKEUP) {
+        /* Console just woke from sleep. The main loop resumes and
+           alarm_tick() detects forward time jump via delta > 120. */
+    }
+}
+
 /* Settings sub-states */
 typedef enum {
     SET_MAIN,
@@ -34,7 +44,9 @@ typedef enum {
     SET_SAVE_OK
 } SettingsSubState;
 
-/* Hold-repeat helper for touch arrows */
+#define TOUCH_SLOP_PX 8.0f
+
+/* Hold-repeat helper for touch arrows and D-pad */
 typedef struct {
     u32  frames;
     bool triggered;
@@ -46,17 +58,22 @@ static bool touch_hit(u16 px, u16 py, const HitRect* r)
            py >= r->y && py < r->y + r->h;
 }
 
-static void hold_repeat_update(HoldRepeat* hr, bool held)
+static void hold_repeat_update_ex(HoldRepeat* hr, bool held, u32 delay, u32 interval)
 {
     hr->triggered = false;
     if (!held) { hr->frames = 0; return; }
 
     if (hr->frames == 0)
         hr->triggered = true;                           /* first press */
-    else if (hr->frames >= 30 && (hr->frames - 30) % 6 == 0)
-        hr->triggered = true;                           /* repeat ~10/s */
+    else if (hr->frames >= delay && (hr->frames - delay) % interval == 0)
+        hr->triggered = true;                           /* repeat */
 
     hr->frames++;
+}
+
+static void hold_repeat_update(HoldRepeat* hr, bool held)
+{
+    hold_repeat_update_ex(hr, held, 30, 6);
 }
 
 static void step_year(int* y, int* m, int* d, int delta)
@@ -133,6 +150,7 @@ int main(int argc, char* argv[])
 
     audio_init();
     atexit(audio_exit);
+    aptHook(&apt_cookie, apt_hook_callback, NULL);
 
     /* --- Clock & Save init --- */
     SaveData save;
@@ -162,6 +180,7 @@ int main(int argc, char* argv[])
 
     AlarmSystem alarm_sys;
     alarm_sys_init(&alarm_sys);
+    alarm_check_startup_missed(&save, &alarm_sys, get_display_time_seconds());
 
     /* Arrow edit state */
     int edit_h = 0, edit_m = 0, edit_s = 0;
@@ -169,7 +188,7 @@ int main(int argc, char* argv[])
     DateFormat edit_fmt = DATEFMT_EUR;
 
     AlarmView alarm_view = ALARM_VIEW_LIST;
-    AlarmListState alarm_list_state = {0.0f, 0.0f, false, -1};
+    AlarmListState alarm_list_state = {0.0f, 0.0f, 0.0f, false, false, -1, false, -1};
     int edit_alarm_idx = -1;
     int edit_alarm_h = 0, edit_alarm_m = 0;
     u8 edit_alarm_repeat = REPEAT_ONCE;
@@ -179,9 +198,11 @@ int main(int argc, char* argv[])
     HoldRepeat hr_time[6];      /* h↑ h↓ m↑ m↓ s↑ s↓ */
     HoldRepeat hr_date[6];      /* col1↑ col1↓ col2↑ col2↓ col3↑ col3↓ */
     HoldRepeat hr_alarm[4];     /* alarm h↑ h↓ m↑ m↓ */
+    HoldRepeat hr_dpad[2];      /* dpad up, dpad down */
     memset(hr_time, 0, sizeof(hr_time));
     memset(hr_date, 0, sizeof(hr_date));
     memset(hr_alarm, 0, sizeof(hr_alarm));
+    memset(hr_dpad, 0, sizeof(hr_dpad));
 
     /* === Main loop === */
     while (aptMainLoop()) {
@@ -191,6 +212,9 @@ int main(int argc, char* argv[])
         hidScanInput();
         u32 kDown = hidKeysDown();
         u32 kHeld = hidKeysHeld();
+
+        hold_repeat_update_ex(&hr_dpad[0], (kHeld & KEY_DUP) != 0, 25, 6);
+        hold_repeat_update_ex(&hr_dpad[1], (kHeld & KEY_DDOWN) != 0, 25, 6);
 
         if (kDown & KEY_START) break;
 
@@ -364,6 +388,19 @@ int main(int argc, char* argv[])
                         save.alarms[edit_alarm_idx].repeat_mode = edit_alarm_repeat;
                         save.alarms[edit_alarm_idx].ringtone_id = edit_alarm_tone;
                         save.alarms[edit_alarm_idx].enabled = true; // Auto-enable on edit
+
+                        /* Guard against instant firing if scheduled time for today already passed */
+                        s64 now_sec = get_display_time_seconds();
+                        int y, m, d;
+                        s64 now_days = now_sec / 86400;
+                        if ((now_sec % 86400) < 0) now_days--;
+                        days_to_ymd(now_days, &y, &m, &d);
+                        s64 today_fire = ymd_to_days(y, m, d) * 86400LL + edit_alarm_h * 3600LL + edit_alarm_m * 60LL;
+                        if (today_fire <= now_sec) {
+                            save.alarms[edit_alarm_idx].last_fired_epoch = today_fire;
+                        } else {
+                            save.alarms[edit_alarm_idx].last_fired_epoch = today_fire - 86400LL;
+                        }
                     }
                     save_write(&save);
                     show_delete_confirm = false;
@@ -453,18 +490,25 @@ int main(int argc, char* argv[])
                             show_delete_confirm = false;
                             alarm_view = STATE_ALARM_ADD;
                         }
-                    } else if (kDown & KEY_DDOWN) {
-                        alarm_list_state.selected_index++;
-                        if (alarm_list_state.selected_index >= save.alarm_count) alarm_list_state.selected_index = save.alarm_count - 1;
-                        // Basic auto-scroll (simplification: jump to show)
+                    } else if (save.alarm_count > 0 && hr_dpad[1].triggered) { /* DDOWN continuous hold-repeat with circular wrap */
+                        if (alarm_list_state.selected_index < 0) {
+                            alarm_list_state.selected_index = 0;
+                        } else {
+                            alarm_list_state.selected_index = (alarm_list_state.selected_index + 1) % save.alarm_count;
+                        }
                         float y = 36.0f - alarm_list_state.scroll_y + alarm_list_state.selected_index * 52.0f;
-                        if (y > 150.0f) alarm_list_state.scroll_y += (y - 150.0f);
-                    } else if (kDown & KEY_DUP) {
-                        alarm_list_state.selected_index--;
-                        if (alarm_list_state.selected_index < 0) alarm_list_state.selected_index = 0;
+                        if (y > 146.0f) alarm_list_state.scroll_y += (y - 146.0f);
+                        if (y < 36.0f) alarm_list_state.scroll_y -= (36.0f - y);
+                    } else if (save.alarm_count > 0 && hr_dpad[0].triggered) { /* DUP continuous hold-repeat with circular wrap */
+                        if (alarm_list_state.selected_index <= 0) {
+                            alarm_list_state.selected_index = save.alarm_count - 1;
+                        } else {
+                            alarm_list_state.selected_index--;
+                        }
                         float y = 36.0f - alarm_list_state.scroll_y + alarm_list_state.selected_index * 52.0f;
                         if (y < 36.0f) alarm_list_state.scroll_y -= (36.0f - y);
-                    } else if (kDown & KEY_A && alarm_list_state.selected_index >= 0) {
+                        if (y > 146.0f) alarm_list_state.scroll_y += (y - 146.0f);
+                    } else if (kDown & KEY_A && alarm_list_state.selected_index >= 0 && alarm_list_state.selected_index < save.alarm_count) {
                         edit_alarm_idx = alarm_list_state.selected_index;
                         AlarmEntry* a = &save.alarms[edit_alarm_idx];
                         edit_alarm_h = a->hour;
@@ -475,48 +519,84 @@ int main(int argc, char* argv[])
                         show_delete_confirm = false;
                         alarm_view = STATE_ALARM_EDIT;
                     } else if (tDown && touch.py >= 34 && touch.py <= 198) {
-                        /* Touch in scroll area */
-                        alarm_list_state.is_dragging = true;
+                        /* Touch down in scroll area: initiate touch-slop disambiguation */
                         alarm_list_state.touch_start_y = touch.py;
+                        alarm_list_state.touch_start_x = touch.px;
+                        alarm_list_state.is_dragging = false;
+                        alarm_list_state.potential_tap = true;
+                        alarm_list_state.candidate_index = -1;
+                        alarm_list_state.candidate_is_toggle = false;
                         
-                        /* Check for hits on cards or toggle boxes */
                         float start_y = 36.0f - alarm_list_state.scroll_y;
                         for (int i = 0; i < save.alarm_count; i++) {
                             float y = start_y + i * 52.0f;
                             if (y > 200.0f || y + 48.0f < 34.0f) continue;
                             
-                            /* Toggle box hit rect (roughly 300 - 30, y + 14, 20x20) */
-                            HitRect toggle_rect = { 300.0f - 10.0f - 20.0f - 10.0f, y, 40.0f, 48.0f }; // padded
+                            HitRect toggle_rect = { 300.0f - 10.0f - 20.0f - 10.0f, y, 40.0f, 48.0f };
                             if (touch_hit(touch.px, touch.py, &toggle_rect)) {
-                                save.alarms[i].enabled = !save.alarms[i].enabled;
-                                save_write(&save);
-                                alarm_list_state.is_dragging = false; // consume
+                                alarm_list_state.candidate_index = i;
+                                alarm_list_state.candidate_is_toggle = true;
                                 break;
                             }
                             
-                            /* Card hit rect */
-                            HitRect card_rect = { 10.0f, y, 290.0f - 40.0f, 48.0f }; // Exclude toggle
+                            HitRect card_rect = { 10.0f, y, 290.0f - 40.0f, 48.0f };
                             if (touch_hit(touch.px, touch.py, &card_rect)) {
-                                alarm_list_state.selected_index = i;
-                                edit_alarm_idx = i;
-                                AlarmEntry* a = &save.alarms[i];
-                                edit_alarm_h = a->hour;
-                                edit_alarm_m = a->minute;
-                                edit_alarm_repeat = a->repeat_mode;
-                                edit_alarm_tone = a->ringtone_id;
-                                memset(hr_alarm, 0, sizeof(hr_alarm));
-                                show_delete_confirm = false;
-                                alarm_view = STATE_ALARM_EDIT;
-                                alarm_list_state.is_dragging = false;
+                                alarm_list_state.candidate_index = i;
+                                alarm_list_state.candidate_is_toggle = false;
                                 break;
                             }
                         }
-                    } else if (tHeld && alarm_list_state.is_dragging) {
+                    } else if (tHeld && (alarm_list_state.potential_tap || alarm_list_state.is_dragging)) {
                         float delta_y = touch.py - alarm_list_state.touch_start_y;
-                        alarm_list_state.scroll_y -= delta_y;
-                        alarm_list_state.touch_start_y = touch.py;
-                    } else if (!tHeld) {
+                        if (!alarm_list_state.is_dragging) {
+                            if (fabsf(delta_y) > TOUCH_SLOP_PX) {
+                                alarm_list_state.is_dragging = true;
+                                alarm_list_state.potential_tap = false;
+                                alarm_list_state.candidate_index = -1;
+                            }
+                        }
+                        if (alarm_list_state.is_dragging) {
+                            alarm_list_state.scroll_y -= delta_y;
+                            alarm_list_state.touch_start_y = touch.py;
+                        }
+                    } else if (!tHeld && (alarm_list_state.potential_tap || alarm_list_state.is_dragging)) {
+                        /* Touch release: register tap only if within slop threshold */
+                        if (alarm_list_state.potential_tap && !alarm_list_state.is_dragging) {
+                            int idx = alarm_list_state.candidate_index;
+                            if (idx >= 0 && idx < save.alarm_count) {
+                                if (alarm_list_state.candidate_is_toggle) {
+                                    save.alarms[idx].enabled = !save.alarms[idx].enabled;
+                                    if (save.alarms[idx].enabled) {
+                                        s64 now_sec = get_display_time_seconds();
+                                        int y, m, d;
+                                        s64 now_days = now_sec / 86400;
+                                        if ((now_sec % 86400) < 0) now_days--;
+                                        days_to_ymd(now_days, &y, &m, &d);
+                                        s64 today_fire = ymd_to_days(y, m, d) * 86400LL + save.alarms[idx].hour * 3600LL + save.alarms[idx].minute * 60LL;
+                                        if (today_fire <= now_sec) {
+                                            save.alarms[idx].last_fired_epoch = today_fire;
+                                        } else {
+                                            save.alarms[idx].last_fired_epoch = today_fire - 86400LL;
+                                        }
+                                    }
+                                    save_write(&save);
+                                } else {
+                                    alarm_list_state.selected_index = idx;
+                                    edit_alarm_idx = idx;
+                                    AlarmEntry* a = &save.alarms[idx];
+                                    edit_alarm_h = a->hour;
+                                    edit_alarm_m = a->minute;
+                                    edit_alarm_repeat = a->repeat_mode;
+                                    edit_alarm_tone = a->ringtone_id;
+                                    memset(hr_alarm, 0, sizeof(hr_alarm));
+                                    show_delete_confirm = false;
+                                    alarm_view = STATE_ALARM_EDIT;
+                                }
+                            }
+                        }
                         alarm_list_state.is_dragging = false;
+                        alarm_list_state.potential_tap = false;
+                        alarm_list_state.candidate_index = -1;
                     }
                     
                     /* Clamp scroll */
@@ -600,7 +680,12 @@ int main(int argc, char* argv[])
         C2D_TargetClear(bot, CLR_BG);
         C2D_SceneBegin(bot);
 
-        if (is_first_boot) {
+        if (alarm_sys.state == ALARM_STATE_RINGING) {
+            int first_ringing = __builtin_ctz(alarm_sys.ringing_mask);
+            ui_draw_alarm_ringing_bottom(textBuf, save.alarms[first_ringing].hour, save.alarms[first_ringing].minute, save.alarms[first_ringing].repeat_mode);
+        } else if (alarm_sys.missed_alarm) {
+            ui_draw_alarm_missed_modal(textBuf, alarm_sys.missed_count);
+        } else if (is_first_boot) {
             ui_draw_first_boot(textBuf, first_boot_frames > 30);
         } else if (is_settings) {
             switch (settings_sub) {
@@ -671,22 +756,16 @@ int main(int argc, char* argv[])
                 break;
             }
 
-            /* Draw persistent tab bar if modal is not active */
-            if (tmr.state != TMR_EXPIRED && alarm_sys.state != ALARM_STATE_RINGING && !alarm_sys.missed_alarm) {
+            /* Draw persistent tab bar if timer modal is not active */
+            if (tmr.state != TMR_EXPIRED) {
                 ui_draw_tab_bar(textBuf, active_mode);
-            }
-
-            /* Draw Alarm Modals over everything else */
-            if (alarm_sys.state == ALARM_STATE_RINGING) {
-                int first_ringing = __builtin_ctz(alarm_sys.ringing_mask);
-                ui_draw_alarm_ringing_bottom(textBuf, save.alarms[first_ringing].hour, save.alarms[first_ringing].minute, save.alarms[first_ringing].repeat_mode);
-            } else if (alarm_sys.missed_alarm) {
-                ui_draw_alarm_missed_modal(textBuf);
             }
         }
 
         C3D_FrameEnd(0);
     }
+
+    aptUnhook(&apt_cookie);
 
     /* --- Cleanup (reverse init order) --- */
     if (sprite_sheet) {

@@ -1,7 +1,8 @@
 #include "alarm.h"
 #include "save.h"
-#include <stdio.h>
+#include "clock.h"
 #include "audio.h"
+#include <stdio.h>
 
 int alarm_add(SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id) {
     if (!save) return -1;
@@ -15,7 +16,20 @@ int alarm_add(SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id
             save->alarms[i].minute = minute;
             save->alarms[i].repeat_mode = repeat_mode;
             save->alarms[i].ringtone_id = ringtone_id;
-            save->alarms[i].last_fired_epoch = 0;
+
+            /* Guard against immediate triggering if scheduled time for today already passed */
+            s64 now = get_display_time_seconds();
+            int y, m, d;
+            s64 now_days = now / 86400;
+            if ((now % 86400) < 0) now_days--;
+            days_to_ymd(now_days, &y, &m, &d);
+            s64 today_fire = ymd_to_days(y, m, d) * 86400LL + hour * 3600LL + minute * 60LL;
+            if (today_fire <= now) {
+                save->alarms[i].last_fired_epoch = today_fire;
+            } else {
+                save->alarms[i].last_fired_epoch = today_fire - 86400LL;
+            }
+
             save->alarm_count++;
             save_write(save);
             return i;
@@ -55,14 +69,15 @@ void alarm_update(SaveData* save, int index) {
     }
 }
 
-#include "clock.h"
-
 void alarm_sys_init(AlarmSystem* sys) {
     if (sys) {
         sys->ringing_mask = 0;
         sys->ring_start_epoch = 0;
         sys->active_ringtone_id = 0;
         sys->state = ALARM_STATE_IDLE;
+        sys->missed_alarm = false;
+        sys->missed_count = 0;
+        sys->ring_frames = 0;
     }
 }
 
@@ -81,16 +96,15 @@ s64 alarm_calc_next_fire_epoch(s64 now_epoch, const AlarmEntry* alarm) {
         candidate += 86400LL;
     }
 
-    if (alarm->repeat_mode == REPEAT_ONCE || alarm->repeat_mode == REPEAT_DAILY) {
-        return candidate;
-    }
-
     while (true) {
         s64 c_days = candidate / 86400LL;
+        if ((candidate % 86400LL) < 0) c_days--;
         days_to_ymd(c_days, &y, &m, &d);
         int dow = day_of_week(y, m, d);
 
-        if (alarm->repeat_mode == REPEAT_WEEKDAYS) {
+        if (alarm->repeat_mode == REPEAT_ONCE || alarm->repeat_mode == REPEAT_DAILY) {
+            return candidate;
+        } else if (alarm->repeat_mode == REPEAT_WEEKDAYS) {
             if (dow >= 1 && dow <= 5) return candidate;
         } else if (alarm->repeat_mode == REPEAT_WEEKENDS) {
             if (dow == 0 || dow == 6) return candidate;
@@ -117,11 +131,18 @@ static void alarm_check_missed(SaveData* save, AlarmSystem* sys, s64 prev, s64 n
                         sys->state = ALARM_STATE_RINGING;
                         sys->ring_start_epoch = now;
                         sys->active_ringtone_id = alarm->ringtone_id;
+                        audio_play(sys->active_ringtone_id);
                     } else {
                         sys->ring_start_epoch = now;
+                        if (sys->active_ringtone_id != alarm->ringtone_id) {
+                            sys->active_ringtone_id = alarm->ringtone_id;
+                            audio_play(sys->active_ringtone_id);
+                        }
                     }
                 }
             } else {
+                /* Older than 10 minutes: silently advance */
+                alarm->last_fired_epoch = expected;
                 if (alarm->repeat_mode == REPEAT_ONCE) {
                     alarm->enabled = false;
                 }
@@ -206,3 +227,28 @@ void alarm_dismiss_all(SaveData* save, AlarmSystem* sys) {
     audio_stop();
     save_write(save);
 }
+
+void alarm_check_startup_missed(SaveData* save, AlarmSystem* sys, s64 now) {
+    if (!save || !sys) return;
+    int missed_count = 0;
+    for (int i = 0; i < save->alarm_count; i++) {
+        AlarmEntry* a = &save->alarms[i];
+        if (!a->enabled) continue;
+        if (a->last_fired_epoch > 0) {
+            s64 expected = alarm_calc_next_fire_epoch(a->last_fired_epoch, a);
+            if (expected != -1 && expected < now) {
+                missed_count++;
+                if (a->repeat_mode == REPEAT_ONCE) {
+                    a->enabled = false;
+                }
+                a->last_fired_epoch = expected;
+            }
+        }
+    }
+    if (missed_count > 0) {
+        sys->missed_alarm = true;
+        sys->missed_count = missed_count;
+        save_write(save);
+    }
+}
+

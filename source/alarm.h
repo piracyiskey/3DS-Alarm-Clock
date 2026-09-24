@@ -40,7 +40,8 @@ typedef struct {
 
     AlarmRingState state;
     bool missed_alarm;
-    u32 ring_frames;
+    int  missed_count;
+    u32  ring_frames;
 } AlarmSystem;
 
 struct SaveData;
@@ -53,3 +54,4 @@ void alarm_sys_init(AlarmSystem* sys);
 s64 alarm_calc_next_fire_epoch(s64 now_epoch, const AlarmEntry* alarm);
 void alarm_tick(struct SaveData* save, AlarmSystem* sys);
 void alarm_dismiss_all(struct SaveData* save, AlarmSystem* sys);
+void alarm_check_startup_missed(struct SaveData* save, AlarmSystem* sys, s64 now);
