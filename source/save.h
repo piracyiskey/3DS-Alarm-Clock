@@ -2,8 +2,10 @@
 #include <3ds/types.h>
 #include <stdbool.h>
 
+#include "alarm.h"
+
 #define SAVE_MAGIC   0x434C4B32  /* "CLK2" */
-#define SAVE_VERSION 2
+#define SAVE_VERSION 3
 
 typedef enum {
     DATEFMT_ISO,  /* YYYY-MM-DD */
@@ -11,14 +13,17 @@ typedef enum {
     DATEFMT_US    /* MM/DD/YYYY */
 } DateFormat;
 
-typedef struct {
-    u32       magic;            /* SAVE_MAGIC */
-    u32       version;          /* SAVE_VERSION */
-    s32       time_offset_s;    /* Seconds offset from hardware RTC time-of-day */
-    s32       date_offset_days; /* Days offset from hardware RTC date */
-    u8        date_format;      /* DateFormat enum stored as u8 */
-    u8        reserved[23];     /* Pad to 40 bytes, reserved for future alarm data */
-} SaveData;                     /* 40 bytes */
+typedef struct SaveData {
+    u32        magic;                   /*  4 bytes */
+    u32        version;                 /*  4 bytes */
+    s32        time_offset_s;           /*  4 bytes */
+    s32        date_offset_days;        /*  4 bytes */
+    u8         date_format;             /*  1 byte  */
+    u8         alarm_count;             /*  1 byte  — number of valid alarms */
+    u8         reserved_header[6];      /*  6 bytes — future header fields */
+    AlarmEntry alarms[MAX_ALARMS];      /* 16 × 16 = 256 bytes */
+    u8         reserved_tail[16];       /* 16 bytes — future expansion */
+} SaveData;                             /* Total: 296 bytes */
 
 bool save_exists(void);
 bool save_read(SaveData* out);

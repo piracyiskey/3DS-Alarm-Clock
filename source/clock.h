@@ -9,6 +9,7 @@ void clock_init(s32 time_offset_s, s32 date_offset_days);
 void clock_get_hms(int* h, int* m, int* s);
 void clock_get_ymd(int* y, int* m, int* d);
 s64  clock_get_hw_rtc_ms(void);
+s64  get_display_time_seconds(void);
 void clock_apply_time_edit(int h, int m, int s, SaveData* save);
 void clock_apply_date_edit(int y, int m, int d, SaveData* save);
 void clock_reset(SaveData* save);

@@ -15,10 +15,20 @@ typedef struct {
     s64 hw_rtc_at_save_ms;  /* hardware RTC snapshot */
 } ClockSaveDataV1;
 
+typedef struct {
+    u32       magic;
+    u32       version;
+    s32       time_offset_s;
+    s32       date_offset_days;
+    u8        date_format;
+    u8        reserved[23];
+} SaveDataV2;
+
 void save_ensure_dir(void)
 {
     mkdir("sdmc:/3ds", 0777);
     mkdir(SAVE_DIR, 0777);
+    mkdir(SAVE_DIR "/ringtones", 0777);
 }
 
 void save_init_default(SaveData* data)
@@ -29,6 +39,10 @@ void save_init_default(SaveData* data)
     data->time_offset_s    = 0;
     data->date_offset_days = 0;
     data->date_format      = (u8)DATEFMT_EUR;
+    data->alarm_count      = 0;
+    for (int i = 0; i < MAX_ALARMS; i++) {
+        data->alarms[i].id = ALARM_INVALID;
+    }
 }
 
 bool save_exists(void)
@@ -57,6 +71,24 @@ bool save_read(SaveData* out)
         return n == sizeof(*out);
     }
 
+    /* Check for v2 save and auto-migrate */
+    if (header[0] == SAVE_MAGIC && header[1] == 2) {
+        rewind(f);
+        SaveDataV2 v2;
+        size_t n = fread(&v2, 1, sizeof(v2), f);
+        fclose(f);
+        if (n != sizeof(v2)) return false;
+
+        save_init_default(out);
+        out->time_offset_s    = v2.time_offset_s;
+        out->date_offset_days = v2.date_offset_days;
+        out->date_format      = v2.date_format;
+
+        /* Write updated v3 save file immediately */
+        save_write(out);
+        return true;
+    }
+
     /* Check for v1 save and auto-migrate */
     if (header[0] == V1_MAGIC && header[1] == 1) {
         rewind(f);
@@ -75,7 +107,7 @@ bool save_read(SaveData* out)
         out->date_offset_days = date_offset_days;
         out->date_format      = (u8)DATEFMT_EUR;
 
-        /* Write updated v2 save file immediately */
+        /* Write updated v3 save file immediately */
         save_write(out);
         return true;
     }

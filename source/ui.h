@@ -59,6 +59,29 @@ extern const HitRect BTN_TMR_PAUSE;
 extern const HitRect BTN_TMR_RESUME;
 extern const HitRect BTN_TMR_RESET;
 
+/* --- Alarm modes & views --- */
+typedef enum {
+    ALARM_VIEW_LIST,
+    STATE_ALARM_ADD,
+    STATE_ALARM_EDIT
+} AlarmView;
+
+/* --- Alarm buttons --- */
+extern const HitRect BTN_ALARM_ADD;
+extern const HitRect BTN_ALARM_EDIT_SAVE;
+extern const HitRect BTN_ALARM_EDIT_CANCEL;
+extern const HitRect BTN_ALARM_EDIT_DELETE;
+extern const HitRect BTN_ALARM_REPEAT_LEFT;
+extern const HitRect BTN_ALARM_REPEAT_RIGHT;
+extern const HitRect BTN_ALARM_TONE_LEFT;
+extern const HitRect BTN_ALARM_TONE_RIGHT;
+extern const HitRect BTN_ALARM_DISMISS;
+extern const HitRect BTN_ALARM_MISSED_OK;
+
+/* Dedicated 2-Column Alarm Stepper Arrows */
+extern const HitRect ARROW_ALARM_H_UP,   ARROW_ALARM_H_DOWN;
+extern const HitRect ARROW_ALARM_M_UP,   ARROW_ALARM_M_DOWN;
+
 /* --- Settings overlay buttons --- */
 extern const HitRect BTN_SET_BACK;
 extern const HitRect BTN_SET_SAVE;
@@ -83,7 +106,19 @@ void ui_draw_header(C2D_TextBuf buf, C2D_Image settings_icon, const char* title)
 void ui_draw_tab_bar(C2D_TextBuf buf, AppMode active);
 
 /* Bottom screen — Tab modes */
-void ui_draw_alarm_placeholder(C2D_TextBuf buf);
+typedef struct {
+    float scroll_y;
+    float touch_start_y;
+    bool  is_dragging;
+    int   selected_index;
+} AlarmListState;
+
+void ui_draw_alarm_list(C2D_TextBuf buf, SaveData* save, AlarmListState* state, C2D_Image settings_icon);
+void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode, u8 ringtone_id, bool is_new, const char* ringtone_name);
+void ui_draw_alarm_delete_confirm(C2D_TextBuf buf);
+void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode, u32 frame_counter);
+void ui_draw_alarm_ringing_bottom(C2D_TextBuf buf, int h, int m, u8 repeat_mode);
+void ui_draw_alarm_missed_modal(C2D_TextBuf buf);
 void ui_draw_clock_bottom(C2D_TextBuf buf);
 void ui_draw_stopwatch_idle(C2D_TextBuf buf);
 void ui_draw_stopwatch_running(C2D_TextBuf buf);

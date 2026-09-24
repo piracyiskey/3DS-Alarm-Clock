@@ -18,6 +18,7 @@ EXAMPLES.md
 # Editor & IDE configurations
 .vscode/
 .clangd
+crash_dumps/
 
 # OS generated files
 .DS_Store

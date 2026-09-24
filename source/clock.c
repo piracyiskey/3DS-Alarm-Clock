@@ -108,7 +108,7 @@ void clock_init(s32 time_offset_s, s32 date_offset_days)
     g_has_offset       = (time_offset_s != 0 || date_offset_days != 0);
 }
 
-static s64 get_display_time_seconds(void)
+s64 get_display_time_seconds(void)
 {
     s64 sys_s = get_system_time_seconds();
     return sys_s + ((s64)g_date_offset_days * 86400LL) + (s64)g_time_offset_s;
