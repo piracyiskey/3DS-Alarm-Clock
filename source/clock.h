@@ -1,20 +1,25 @@
 #pragma once
 #include <3ds/types.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include "save.h"
 
-#define CLOCK_SAVE_MAGIC 0x434C4B30 /* "CLK0" */
-
-typedef struct {
-    u32 magic;
-    u32 version;
-    s64 target_time_ms;    /* Desired app time at moment of save (ms since 1900) */
-    s64 hw_rtc_at_save_ms; /* Hardware RTC value at moment of save */
-} ClockSaveData;
-
-/* Call cfguInit() before using these functions. */
-void clock_init(const ClockSaveData* save);
+/* Call cfguInit() before using clock functions. */
+void clock_init(s32 time_offset_s, s32 date_offset_days);
 void clock_get_hms(int* h, int* m, int* s);
+void clock_get_ymd(int* y, int* m, int* d);
 s64  clock_get_hw_rtc_ms(void);
-void clock_apply_edit(int h, int m, int s, ClockSaveData* out);
-void clock_reset(void);
+void clock_apply_time_edit(int h, int m, int s, SaveData* save);
+void clock_apply_date_edit(int y, int m, int d, SaveData* save);
+void clock_reset(SaveData* save);
 bool clock_has_offset(void);
+s32  clock_get_time_offset_s(void);
+s32  clock_get_date_offset_days(void);
+
+/* Date calculation and formatting helpers */
+bool is_leap_year(int y);
+int  days_in_month(int y, int m);
+int  day_of_week(int y, int m, int d);
+s64  ymd_to_days(int y, int m, int d);
+void days_to_ymd(s64 total_days, int* y, int* m, int* d);
+void format_date_string(char* out, size_t sz, int y, int m, int d, DateFormat fmt);

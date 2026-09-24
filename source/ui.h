@@ -1,6 +1,7 @@
 #pragma once
 #include <citro2d.h>
 #include <stdbool.h>
+#include "save.h"
 
 /* Hit rectangle for touch input */
 typedef struct { float x, y, w, h; } HitRect;
@@ -17,24 +18,34 @@ typedef struct { float x, y, w, h; } HitRect;
 #define CLR_TAB_INACT   C2D_Color32(0x22, 0x22, 0x22, 0xFF)
 #define CLR_TAB_SEP     C2D_Color32(0x40, 0x40, 0x40, 0xFF)
 
-/* Modes */
+/* Modes (Tab bar items) */
 typedef enum {
+    MODE_ALARM,
     MODE_CLOCK,
     MODE_STOPWATCH,
-    MODE_TIMER,
-    MODE_SETTINGS
+    MODE_TIMER
 } AppMode;
 
 /* --- Tab bar layout constants (docked at y=200, h=40) --- */
+extern const HitRect TAB_ALARM;
 extern const HitRect TAB_CLOCK;
 extern const HitRect TAB_STOPWATCH;
 extern const HitRect TAB_TIMER;
-extern const HitRect TAB_SETTINGS;
 
-/* --- Shared Arrow layout (used for Clock Edit and Timer Adjust) --- */
+/* --- Global header bar hit targets --- */
+extern const HitRect BTN_SETTINGS_ICON;
+
+/* --- Shared Time Arrow layout --- */
 extern const HitRect ARROW_H_UP,   ARROW_H_DOWN;
 extern const HitRect ARROW_M_UP,   ARROW_M_DOWN;
 extern const HitRect ARROW_S_UP,   ARROW_S_DOWN;
+
+/* --- Date Edit Column Arrows & Buttons --- */
+extern const HitRect ARROW_COL1_UP, ARROW_COL1_DOWN;
+extern const HitRect ARROW_COL2_UP, ARROW_COL2_DOWN;
+extern const HitRect ARROW_COL3_UP, ARROW_COL3_DOWN;
+extern const HitRect BTN_FMT_LEFT;
+extern const HitRect BTN_FMT_RIGHT;
 
 /* --- Stopwatch buttons --- */
 extern const HitRect BTN_SW_START;
@@ -48,11 +59,12 @@ extern const HitRect BTN_TMR_PAUSE;
 extern const HitRect BTN_TMR_RESUME;
 extern const HitRect BTN_TMR_RESET;
 
-/* --- Settings buttons --- */
-extern const HitRect BTN_SET_RESET;
-extern const HitRect BTN_SET_EDIT;
+/* --- Settings overlay buttons --- */
 extern const HitRect BTN_SET_BACK;
 extern const HitRect BTN_SET_SAVE;
+extern const HitRect BTN_SET_EDIT;
+extern const HitRect BTN_SET_RESET;
+extern const HitRect BTN_EDIT_DATE;
 
 /* --- Modal buttons --- */
 extern const HitRect BTN_OK;
@@ -62,32 +74,31 @@ extern const HitRect BTN_CONFIRM;
 /* --- Drawing functions --- */
 
 /* Top screen */
-void ui_draw_top_clock(C2D_TextBuf buf, int h, int m, int s);
+void ui_draw_top_clock_with_date(C2D_TextBuf buf, int h, int m, int s, const char* date_str);
 void ui_draw_top_stopwatch(C2D_TextBuf buf, int hh, int mm, int ss, int cs, bool show_hours);
 void ui_draw_top_timer(C2D_TextBuf buf, int hh, int mm, int ss);
 
-/* Bottom screen — navigation */
+/* Bottom screen — Header & Navigation */
+void ui_draw_header(C2D_TextBuf buf, C2D_Image settings_icon, const char* title);
 void ui_draw_tab_bar(C2D_TextBuf buf, AppMode active);
 
-/* Bottom screen — Clock mode */
+/* Bottom screen — Tab modes */
+void ui_draw_alarm_placeholder(C2D_TextBuf buf);
 void ui_draw_clock_bottom(C2D_TextBuf buf);
-
-/* Bottom screen — Stopwatch mode */
 void ui_draw_stopwatch_idle(C2D_TextBuf buf);
 void ui_draw_stopwatch_running(C2D_TextBuf buf);
 void ui_draw_stopwatch_paused(C2D_TextBuf buf);
-
-/* Bottom screen — Timer mode */
 void ui_draw_timer_adjust(C2D_TextBuf buf, int h, int m, int s);
 void ui_draw_timer_running(C2D_TextBuf buf);
 void ui_draw_timer_paused(C2D_TextBuf buf);
 void ui_draw_timer_expired_modal(C2D_TextBuf buf);
 
-/* Bottom screen — Settings mode */
+/* Bottom screen — Settings overlay screens */
 void ui_draw_settings_main(C2D_TextBuf buf);
-void ui_draw_settings_edit(C2D_TextBuf buf, int h, int m, int s);
+void ui_draw_settings_edit_time(C2D_TextBuf buf, int h, int m, int s);
+void ui_draw_settings_edit_date(C2D_TextBuf buf, int y, int m, int d, DateFormat fmt);
 void ui_draw_modal_confirm(C2D_TextBuf buf);
-void ui_draw_modal_success(C2D_TextBuf buf);
+void ui_draw_modal_success(C2D_TextBuf buf, const char* msg);
 
 /* First boot */
 void ui_draw_first_boot(C2D_TextBuf buf, bool show_ok);
