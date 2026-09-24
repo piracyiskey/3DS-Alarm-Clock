@@ -15,6 +15,34 @@
 #define BOTTOM_ACTION_Y 198.0f /* Top-Y of the bottom action row       */
 
 /* ------------------------------------------------------------------ */
+/*  Alarm Stepper & Selector layout metrics (Add & Edit Alarm views)   */
+/* ------------------------------------------------------------------ */
+/*  All arrow positions are computed at draw time from measured text   */
+/*  height with symmetric padding, for easy micro adjustment.         */
+
+#define ALARM_STEPPER_CY 78.0f    /* Vertical midpoint of alarm digit row  */
+#define ALARM_STEPPER_SCALE 1.50f /* Scale for hh:mm digits                */
+#define ALARM_ARROW_TRI_W 22.0f   /* Arrow triangle width (px)             */
+#define ALARM_ARROW_TRI_H 11.0f   /* Arrow triangle height (px)            */
+#define ALARM_ARROW_PAD 4.0f      /* Gap between arrow tip and digit edge  */
+#define ALARM_COL_H_CX 105.0f     /* Center X of hours column              */
+#define ALARM_COL_COLON_CX 160.0f /* Center X of colon                     */
+#define ALARM_COL_M_CX 215.0f     /* Center X of minutes column            */
+
+/* Centered selector units: [Label] [<] [ Value Container ] [>]       */
+#define ALARM_SEL_TOTAL_W 248.0f     /* Total width of centered unit          */
+#define ALARM_SEL_START_X 36.0f      /* (320 - 248) / 2 = 36px left/right pad */
+#define ALARM_SEL_LABEL_R 90.0f      /* Right edge of label text (x=36..90)   */
+#define ALARM_SEL_BTN_LEFT_X 96.0f   /* Left arrow button X                   */
+#define ALARM_SEL_BOX_X 128.0f       /* Value container box X                 */
+#define ALARM_SEL_BOX_W 124.0f       /* Value container box width             */
+#define ALARM_SEL_BTN_RIGHT_X 256.0f /* Right arrow button X */
+#define ALARM_SEL_BTN_W 28.0f        /* Arrow button width                    */
+#define ALARM_SEL_ROW_H 26.0f        /* Row height                            */
+#define ALARM_SEL_TONE_Y 128.0f      /* Tone row Y                            */
+#define ALARM_SEL_REPEAT_Y 162.0f    /* Repeat row Y                          */
+
+/* ------------------------------------------------------------------ */
 /*  HitRect layout constants                                           */
 /* ------------------------------------------------------------------ */
 
@@ -62,19 +90,25 @@ const HitRect BTN_TMR_RESET = {170.0f, 75.0f, 120.0f, 50.0f};
 const HitRect BTN_ALARM_ADD = {240.0f, 2.0f, 36.0f, 28.0f};
 const HitRect BTN_ALARM_EDIT_SAVE = {245.0f, 4.0f, 65.0f, 28.0f};
 const HitRect BTN_ALARM_EDIT_CANCEL = {10.0f, 4.0f, 65.0f, 28.0f};
-const HitRect BTN_ALARM_EDIT_DELETE = {40.0f, 202.0f, 240.0f, 28.0f};
-const HitRect BTN_ALARM_REPEAT_LEFT = {78.0f, 165.0f, 30.0f, 26.0f};
-const HitRect BTN_ALARM_REPEAT_RIGHT = {246.0f, 165.0f, 30.0f, 26.0f};
-const HitRect BTN_ALARM_TONE_LEFT = {78.0f, 131.0f, 30.0f, 26.0f};
-const HitRect BTN_ALARM_TONE_RIGHT = {246.0f, 131.0f, 30.0f, 26.0f};
+const HitRect BTN_ALARM_EDIT_DELETE = {40.0f, 200.0f, 240.0f, 28.0f};
+const HitRect BTN_ALARM_REPEAT_LEFT = {ALARM_SEL_BTN_LEFT_X, ALARM_SEL_REPEAT_Y,
+                                       ALARM_SEL_BTN_W, ALARM_SEL_ROW_H};
+const HitRect BTN_ALARM_REPEAT_RIGHT = {ALARM_SEL_BTN_RIGHT_X,
+                                        ALARM_SEL_REPEAT_Y, ALARM_SEL_BTN_W,
+                                        ALARM_SEL_ROW_H};
+const HitRect BTN_ALARM_TONE_LEFT = {ALARM_SEL_BTN_LEFT_X, ALARM_SEL_TONE_Y,
+                                     ALARM_SEL_BTN_W, ALARM_SEL_ROW_H};
+const HitRect BTN_ALARM_TONE_RIGHT = {ALARM_SEL_BTN_RIGHT_X, ALARM_SEL_TONE_Y,
+                                      ALARM_SEL_BTN_W, ALARM_SEL_ROW_H};
 const HitRect BTN_ALARM_DISMISS = {60.0f, 140.0f, 200.0f, 40.0f};
 const HitRect BTN_ALARM_MISSED_OK = {60.0f, 140.0f, 200.0f, 40.0f};
 
-/* Dedicated 2-Column Alarm Stepper Arrows */
-const HitRect ARROW_ALARM_H_UP = {80.0f, 38.0f, 50.0f, 26.0f};
-const HitRect ARROW_ALARM_H_DOWN = {80.0f, 92.0f, 50.0f, 28.0f};
-const HitRect ARROW_ALARM_M_UP = {190.0f, 38.0f, 50.0f, 26.0f};
-const HitRect ARROW_ALARM_M_DOWN = {190.0f, 92.0f, 50.0f, 28.0f};
+/* Dedicated 2-Column Alarm Stepper Arrows — col centers x=105, 215; Y estimated
+ * for scale 1.5 dh≈28 */
+const HitRect ARROW_ALARM_H_UP = {80.0f, 35.0f, 50.0f, 26.0f};
+const HitRect ARROW_ALARM_H_DOWN = {80.0f, 89.0f, 50.0f, 28.0f};
+const HitRect ARROW_ALARM_M_UP = {190.0f, 35.0f, 50.0f, 26.0f};
+const HitRect ARROW_ALARM_M_DOWN = {190.0f, 89.0f, 50.0f, 28.0f};
 
 /* Settings overlay buttons */
 const HitRect BTN_SET_BACK = {10.0f, 4.0f, 70.0f, 28.0f};
@@ -448,12 +482,6 @@ void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
   draw_button_scaled(buf, &BTN_ALARM_EDIT_SAVE, "Save", 0.55f, CLR_BTN);
 
   /* 2. Time Stepper (hh : mm) */
-  float cx_h = 105.0f;
-  float cx_colon = 160.0f;
-  float cx_m = 215.0f;
-  float cy_digits = 66.0f;
-  float digit_scale = 1.45f;
-
   char str_h[8], str_m[8];
   snprintf(str_h, sizeof(str_h), "%02d", h);
   snprintf(str_m, sizeof(str_m), "%02d", m);
@@ -467,59 +495,80 @@ void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
   C2D_TextOptimize(&tcol);
 
   float tw_h, th_h, tw_m, th_m, tw_c, th_c;
-  C2D_TextGetDimensions(&th, digit_scale, digit_scale, &tw_h, &th_h);
-  C2D_TextGetDimensions(&tm, digit_scale, digit_scale, &tw_m, &th_m);
-  C2D_TextGetDimensions(&tcol, digit_scale, digit_scale, &tw_c, &th_c);
+  C2D_TextGetDimensions(&th, ALARM_STEPPER_SCALE, ALARM_STEPPER_SCALE, &tw_h,
+                        &th_h);
+  C2D_TextGetDimensions(&tm, ALARM_STEPPER_SCALE, ALARM_STEPPER_SCALE, &tw_m,
+                        &th_m);
+  C2D_TextGetDimensions(&tcol, ALARM_STEPPER_SCALE, ALARM_STEPPER_SCALE, &tw_c,
+                        &th_c);
 
-  C2D_DrawText(&th, C2D_WithColor, cx_h - tw_h / 2.0f, cy_digits, 0.0f,
-               digit_scale, digit_scale, CLR_TEXT);
-  C2D_DrawText(&tcol, C2D_WithColor, cx_colon - tw_c / 2.0f, cy_digits, 0.0f,
-               digit_scale, digit_scale, CLR_TEXT);
-  C2D_DrawText(&tm, C2D_WithColor, cx_m - tw_m / 2.0f, cy_digits, 0.0f,
-               digit_scale, digit_scale, CLR_TEXT);
+  /* Digit row: vertically centered on ALARM_STEPPER_CY */
+  float digit_y = ALARM_STEPPER_CY - th_h / 2.0f;
 
-  float aw = 22.0f, ah = 12.0f;
-  float cy_up = 50.0f;
-  float cy_down = 104.0f;
+  C2D_DrawText(&th, C2D_WithColor, ALARM_COL_H_CX - tw_h / 2.0f, digit_y, 0.0f,
+               ALARM_STEPPER_SCALE, ALARM_STEPPER_SCALE, CLR_TEXT);
+  C2D_DrawText(&tcol, C2D_WithColor, ALARM_COL_COLON_CX - tw_c / 2.0f, digit_y,
+               0.0f, ALARM_STEPPER_SCALE, ALARM_STEPPER_SCALE, CLR_TEXT);
+  C2D_DrawText(&tm, C2D_WithColor, ALARM_COL_M_CX - tw_m / 2.0f, digit_y, 0.0f,
+               ALARM_STEPPER_SCALE, ALARM_STEPPER_SCALE, CLR_TEXT);
 
-  draw_arrow_up(cx_h, cy_up, aw, ah, CLR_TEXT);
-  draw_arrow_up(cx_m, cy_up, aw, ah, CLR_TEXT);
-  draw_arrow_down(cx_h, cy_down, aw, ah, CLR_TEXT);
-  draw_arrow_down(cx_m, cy_down, aw, ah, CLR_TEXT);
+  /* Arrows: symmetric pad from digit bounding box edges */
+  float up_cy = digit_y - ALARM_ARROW_PAD - ALARM_ARROW_TRI_H / 2.0f;
+  float down_cy = digit_y + th_h + ALARM_ARROW_PAD + ALARM_ARROW_TRI_H / 2.0f;
 
-  /* 3. Ringtone Selector */
-  C2D_Text txt;
-  C2D_TextParse(&txt, buf, "Tone:");
-  C2D_TextOptimize(&txt);
-  C2D_DrawText(&txt, C2D_WithColor, 16.0f, 136.0f, 0.0f, 0.55f, 0.55f,
-               CLR_TEXT);
+  draw_arrow_up(ALARM_COL_H_CX, up_cy, ALARM_ARROW_TRI_W, ALARM_ARROW_TRI_H,
+                CLR_TEXT);
+  draw_arrow_up(ALARM_COL_M_CX, up_cy, ALARM_ARROW_TRI_W, ALARM_ARROW_TRI_H,
+                CLR_TEXT);
+  draw_arrow_down(ALARM_COL_H_CX, down_cy, ALARM_ARROW_TRI_W, ALARM_ARROW_TRI_H,
+                  CLR_TEXT);
+  draw_arrow_down(ALARM_COL_M_CX, down_cy, ALARM_ARROW_TRI_W, ALARM_ARROW_TRI_H,
+                  CLR_TEXT);
+
+  /* 3. Ringtone Selector — Centered unit: [Tone:] [<] [ Value Container ] [>]
+   */
+  C2D_Text txt_tone;
+  C2D_TextParse(&txt_tone, buf, "Tone:");
+  C2D_TextOptimize(&txt_tone);
+  float tw_tl, th_tl;
+  C2D_TextGetDimensions(&txt_tone, 0.55f, 0.55f, &tw_tl, &th_tl);
+  float y_tone_lbl = ALARM_SEL_TONE_Y + (ALARM_SEL_ROW_H - th_tl) / 2.0f;
+  C2D_DrawText(&txt_tone, C2D_WithColor, ALARM_SEL_LABEL_R - tw_tl, y_tone_lbl,
+               0.0f, 0.55f, 0.55f, CLR_TEXT);
 
   draw_button_scaled(buf, &BTN_ALARM_TONE_LEFT, "<", 0.55f, CLR_BTN);
   draw_button_scaled(buf, &BTN_ALARM_TONE_RIGHT, ">", 0.55f, CLR_BTN);
 
   /* Ringtone value container */
-  C2D_DrawRectSolid(112.0f, 131.0f, 0.0f, 130.0f, 26.0f,
-                    C2D_Color32(0x22, 0x22, 0x22, 0xFF));
+  C2D_DrawRectSolid(ALARM_SEL_BOX_X, ALARM_SEL_TONE_Y, 0.0f, ALARM_SEL_BOX_W,
+                    ALARM_SEL_ROW_H, C2D_Color32(0x22, 0x22, 0x22, 0xFF));
   C2D_Text txt_rn;
   C2D_TextParse(&txt_rn, buf, ringtone_name ? ringtone_name : "Default");
   C2D_TextOptimize(&txt_rn);
   float tw_rn, th_rn;
   C2D_TextGetDimensions(&txt_rn, 0.50f, 0.50f, &tw_rn, &th_rn);
-  C2D_DrawText(&txt_rn, C2D_WithColor, 112.0f + (130.0f - tw_rn) / 2.0f,
-               131.0f + (26.0f - th_rn) / 2.0f, 0.0f, 0.50f, 0.50f, CLR_TEXT);
+  C2D_DrawText(&txt_rn, C2D_WithColor,
+               ALARM_SEL_BOX_X + (ALARM_SEL_BOX_W - tw_rn) / 2.0f,
+               ALARM_SEL_TONE_Y + (ALARM_SEL_ROW_H - th_rn) / 2.0f, 0.0f, 0.50f,
+               0.50f, CLR_TEXT);
 
-  /* 4. Repeat Selector */
-  C2D_TextParse(&txt, buf, "Repeat:");
-  C2D_TextOptimize(&txt);
-  C2D_DrawText(&txt, C2D_WithColor, 16.0f, 170.0f, 0.0f, 0.55f, 0.55f,
-               CLR_TEXT);
+  /* 4. Repeat Selector — Centered unit: [Repeat:] [<] [ Value Container ] [>]
+   */
+  C2D_Text txt_rep;
+  C2D_TextParse(&txt_rep, buf, "Repeat:");
+  C2D_TextOptimize(&txt_rep);
+  float tw_rl, th_rl;
+  C2D_TextGetDimensions(&txt_rep, 0.55f, 0.55f, &tw_rl, &th_rl);
+  float y_rep_lbl = ALARM_SEL_REPEAT_Y + (ALARM_SEL_ROW_H - th_rl) / 2.0f;
+  C2D_DrawText(&txt_rep, C2D_WithColor, ALARM_SEL_LABEL_R - tw_rl, y_rep_lbl,
+               0.0f, 0.55f, 0.55f, CLR_TEXT);
 
   draw_button_scaled(buf, &BTN_ALARM_REPEAT_LEFT, "<", 0.55f, CLR_BTN);
   draw_button_scaled(buf, &BTN_ALARM_REPEAT_RIGHT, ">", 0.55f, CLR_BTN);
 
   /* Repeat value container */
-  C2D_DrawRectSolid(112.0f, 165.0f, 0.0f, 130.0f, 26.0f,
-                    C2D_Color32(0x22, 0x22, 0x22, 0xFF));
+  C2D_DrawRectSolid(ALARM_SEL_BOX_X, ALARM_SEL_REPEAT_Y, 0.0f, ALARM_SEL_BOX_W,
+                    ALARM_SEL_ROW_H, C2D_Color32(0x22, 0x22, 0x22, 0xFF));
   const char *rep_str = "Once";
   switch (repeat_mode) {
   case REPEAT_ONCE:
@@ -540,8 +589,10 @@ void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
   C2D_TextOptimize(&txt_rm);
   float tw_rm, th_rm;
   C2D_TextGetDimensions(&txt_rm, 0.50f, 0.50f, &tw_rm, &th_rm);
-  C2D_DrawText(&txt_rm, C2D_WithColor, 112.0f + (130.0f - tw_rm) / 2.0f,
-               165.0f + (26.0f - th_rm) / 2.0f, 0.0f, 0.50f, 0.50f, CLR_TEXT);
+  C2D_DrawText(&txt_rm, C2D_WithColor,
+               ALARM_SEL_BOX_X + (ALARM_SEL_BOX_W - tw_rm) / 2.0f,
+               ALARM_SEL_REPEAT_Y + (ALARM_SEL_ROW_H - th_rm) / 2.0f, 0.0f,
+               0.50f, 0.50f, CLR_TEXT);
 
   /* 5. Delete Alarm Button (Option A) */
   if (!is_new) {
