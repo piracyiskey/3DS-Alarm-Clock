@@ -119,6 +119,26 @@ static void step_date_col(int col, int delta, int* y, int* m, int* d, DateFormat
     }
 }
 
+static void alarm_toggle_entry(SaveData* save, int idx)
+{
+    if (!save || idx < 0 || idx >= save->alarm_count) return;
+    save->alarms[idx].enabled = !save->alarms[idx].enabled;
+    if (save->alarms[idx].enabled) {
+        s64 now_sec = get_display_time_seconds();
+        int y, m, d;
+        s64 now_days = now_sec / 86400;
+        if ((now_sec % 86400) < 0) now_days--;
+        days_to_ymd(now_days, &y, &m, &d);
+        s64 today_fire = ymd_to_days(y, m, d) * 86400LL + save->alarms[idx].hour * 3600LL + save->alarms[idx].minute * 60LL;
+        if (today_fire <= now_sec) {
+            save->alarms[idx].last_fired_epoch = today_fire;
+        } else {
+            save->alarms[idx].last_fired_epoch = today_fire - 86400LL;
+        }
+    }
+    save_write(save);
+}
+
 /* Entry point */
 int main(int argc, char* argv[])
 {
@@ -240,19 +260,19 @@ int main(int argc, char* argv[])
         }
         else if (alarm_sys.state == ALARM_STATE_RINGING) {
             /* Ringing overlay dismiss */
-            if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_DISMISS))) {
+            if ((kDown & (KEY_A | KEY_B)) || (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_DISMISS))) {
                 alarm_dismiss_all(&save, &alarm_sys);
             }
         }
         else if (alarm_sys.missed_alarm) {
             /* Missed alarm modal dismiss */
-            if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_MISSED_OK))) {
+            if ((kDown & (KEY_A | KEY_B)) || (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_MISSED_OK))) {
                 alarm_sys.missed_alarm = false;
             }
         }
         else if (!is_settings && active_mode == MODE_TIMER && tmr.state == TMR_EXPIRED) {
             /* Timer expired modal */
-            if ((kDown & KEY_A) ||
+            if ((kDown & (KEY_A | KEY_B)) ||
                 (tDown && touch_hit(touch.px, touch.py, &BTN_OK))) {
                 timer_dismiss(&tmr);
             }
@@ -277,16 +297,11 @@ int main(int argc, char* argv[])
                 break;
 
             case SET_CONFIRM_RESET:
-                if (tDown) {
-                    if (touch_hit(touch.px, touch.py, &BTN_CONFIRM)) {
-                        clock_reset(&save);
-                        save_msg = "Reset to system time & date!";
-                        settings_sub = SET_SAVE_OK;
-                    } else if (touch_hit(touch.px, touch.py, &BTN_CANCEL)) {
-                        settings_sub = SET_MAIN;
-                    }
-                }
-                if (kDown & KEY_B) {
+                if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_CONFIRM))) {
+                    clock_reset(&save);
+                    save_msg = "Reset to system time & date!";
+                    settings_sub = SET_SAVE_OK;
+                } else if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_CANCEL))) {
                     settings_sub = SET_MAIN;
                 }
                 break;
@@ -350,7 +365,7 @@ int main(int argc, char* argv[])
                 break;
 
             case SET_SAVE_OK:
-                if ((kDown & KEY_A) ||
+                if ((kDown & (KEY_A | KEY_B)) ||
                     (tDown && touch_hit(touch.px, touch.py, &BTN_OK))) {
                     settings_sub = SET_MAIN;
                 }
@@ -431,32 +446,50 @@ int main(int argc, char* argv[])
             }
         }
         else {
-            /* Normal Mode Navigation (Tab bar visible at bottom) */
-            bool tab_touched = false;
-            if (tDown && touch.py >= 200) {
-                if (touch_hit(touch.px, touch.py, &TAB_ALARM)) {
-                    active_mode = MODE_ALARM;
-                    tab_touched = true;
-                } else if (touch_hit(touch.px, touch.py, &TAB_CLOCK)) {
-                    active_mode = MODE_CLOCK;
-                    tab_touched = true;
-                } else if (touch_hit(touch.px, touch.py, &TAB_STOPWATCH)) {
-                    active_mode = MODE_STOPWATCH;
-                    tab_touched = true;
-                } else if (touch_hit(touch.px, touch.py, &TAB_TIMER)) {
-                    active_mode = MODE_TIMER;
-                    tab_touched = true;
-                }
-            }
+            /* ====================================================== */
+            /*  Level 3: Primary Tab Host Navigation & Controls       */
+            /* ====================================================== */
+            bool nav_handled = false;
 
-            /* Settings icon touched in top-right of header */
-            if (!tab_touched && tDown && touch_hit(touch.px, touch.py, &BTN_SETTINGS_ICON)) {
+            /* Hardware Shortcut to Settings (SELECT) */
+            if (kDown & KEY_SELECT) {
                 is_settings  = true;
                 settings_sub = SET_MAIN;
-                tab_touched  = true;
+                nav_handled  = true;
+            }
+            /* Global Tab Navigation via Shoulder Buttons (L / R) with Circular Wrapping */
+            else if (kDown & KEY_L) {
+                active_mode = (AppMode)((active_mode + 3) % 4);
+                nav_handled = true;
+            }
+            else if (kDown & KEY_R) {
+                active_mode = (AppMode)((active_mode + 1) % 4);
+                nav_handled = true;
+            }
+            /* Stylus Touch Navigation: Docked Tab Bar */
+            else if (tDown && touch.py >= 200) {
+                if (touch_hit(touch.px, touch.py, &TAB_ALARM)) {
+                    active_mode = MODE_ALARM;
+                    nav_handled = true;
+                } else if (touch_hit(touch.px, touch.py, &TAB_CLOCK)) {
+                    active_mode = MODE_CLOCK;
+                    nav_handled = true;
+                } else if (touch_hit(touch.px, touch.py, &TAB_STOPWATCH)) {
+                    active_mode = MODE_STOPWATCH;
+                    nav_handled = true;
+                } else if (touch_hit(touch.px, touch.py, &TAB_TIMER)) {
+                    active_mode = MODE_TIMER;
+                    nav_handled = true;
+                }
+            }
+            /* Stylus Touch Navigation: Header Settings Icon */
+            else if (tDown && touch_hit(touch.px, touch.py, &BTN_SETTINGS_ICON)) {
+                is_settings  = true;
+                settings_sub = SET_MAIN;
+                nav_handled  = true;
             }
 
-            if (!tab_touched) {
+            if (!nav_handled) {
                 switch (active_mode) {
                 case MODE_CLOCK:
                     /* No controls on bottom screen */
@@ -464,32 +497,37 @@ int main(int argc, char* argv[])
 
                 case MODE_STOPWATCH:
                     if (sw.state == SW_IDLE) {
-                        if (tDown && touch_hit(touch.px, touch.py, &BTN_SW_START))
+                        if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_SW_START)))
                             stopwatch_start(&sw);
                     } else if (sw.state == SW_RUNNING) {
-                        if (tDown && touch_hit(touch.px, touch.py, &BTN_SW_PAUSE))
+                        if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_SW_PAUSE)))
                             stopwatch_pause(&sw);
-                        else if (tDown && touch_hit(touch.px, touch.py, &BTN_SW_RESET))
+                        else if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_SW_RESET)))
                             stopwatch_reset(&sw);
                     } else if (sw.state == SW_PAUSED) {
-                        if (tDown && touch_hit(touch.px, touch.py, &BTN_SW_RESUME))
+                        if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_SW_RESUME)))
                             stopwatch_resume(&sw);
-                        else if (tDown && touch_hit(touch.px, touch.py, &BTN_SW_RESET))
+                        else if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_SW_RESET)))
                             stopwatch_reset(&sw);
                     }
                     break;
 
                 case MODE_ALARM:
-                    if (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_ADD)) {
-                        if (save.alarm_count < MAX_ALARMS) {
-                            edit_alarm_idx = -1;
-                            clock_get_hms(&edit_alarm_h, &edit_alarm_m, &edit_s);
-                            edit_alarm_repeat = REPEAT_ONCE;
-                            edit_alarm_tone = 0;
-                            memset(hr_alarm, 0, sizeof(hr_alarm));
-                            show_delete_confirm = false;
-                            alarm_view = STATE_ALARM_ADD;
+                    /* Quick Alarm Toggle via Physical Button (X) */
+                    if (kDown & KEY_X) {
+                        if (save.alarm_count > 0 && alarm_list_state.selected_index >= 0 && alarm_list_state.selected_index < save.alarm_count) {
+                            alarm_toggle_entry(&save, alarm_list_state.selected_index);
                         }
+                    } else if (kDown & KEY_A && alarm_list_state.selected_index >= 0 && alarm_list_state.selected_index < save.alarm_count) {
+                        edit_alarm_idx = alarm_list_state.selected_index;
+                        AlarmEntry* a = &save.alarms[edit_alarm_idx];
+                        edit_alarm_h = a->hour;
+                        edit_alarm_m = a->minute;
+                        edit_alarm_repeat = a->repeat_mode;
+                        edit_alarm_tone = a->ringtone_id;
+                        memset(hr_alarm, 0, sizeof(hr_alarm));
+                        show_delete_confirm = false;
+                        alarm_view = STATE_ALARM_EDIT;
                     } else if (save.alarm_count > 0 && hr_dpad[1].triggered) { /* DDOWN continuous hold-repeat with circular wrap */
                         if (alarm_list_state.selected_index < 0) {
                             alarm_list_state.selected_index = 0;
@@ -508,16 +546,16 @@ int main(int argc, char* argv[])
                         float y = 36.0f - alarm_list_state.scroll_y + alarm_list_state.selected_index * 52.0f;
                         if (y < 36.0f) alarm_list_state.scroll_y -= (36.0f - y);
                         if (y > 146.0f) alarm_list_state.scroll_y += (y - 146.0f);
-                    } else if (kDown & KEY_A && alarm_list_state.selected_index >= 0 && alarm_list_state.selected_index < save.alarm_count) {
-                        edit_alarm_idx = alarm_list_state.selected_index;
-                        AlarmEntry* a = &save.alarms[edit_alarm_idx];
-                        edit_alarm_h = a->hour;
-                        edit_alarm_m = a->minute;
-                        edit_alarm_repeat = a->repeat_mode;
-                        edit_alarm_tone = a->ringtone_id;
-                        memset(hr_alarm, 0, sizeof(hr_alarm));
-                        show_delete_confirm = false;
-                        alarm_view = STATE_ALARM_EDIT;
+                    } else if (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_ADD)) {
+                        if (save.alarm_count < MAX_ALARMS) {
+                            edit_alarm_idx = -1;
+                            clock_get_hms(&edit_alarm_h, &edit_alarm_m, &edit_s);
+                            edit_alarm_repeat = REPEAT_ONCE;
+                            edit_alarm_tone = 0;
+                            memset(hr_alarm, 0, sizeof(hr_alarm));
+                            show_delete_confirm = false;
+                            alarm_view = STATE_ALARM_ADD;
+                        }
                     } else if (tDown && touch.py >= 34 && touch.py <= 198) {
                         /* Touch down in scroll area: initiate touch-slop disambiguation */
                         alarm_list_state.touch_start_y = touch.py;
@@ -565,21 +603,7 @@ int main(int argc, char* argv[])
                             int idx = alarm_list_state.candidate_index;
                             if (idx >= 0 && idx < save.alarm_count) {
                                 if (alarm_list_state.candidate_is_toggle) {
-                                    save.alarms[idx].enabled = !save.alarms[idx].enabled;
-                                    if (save.alarms[idx].enabled) {
-                                        s64 now_sec = get_display_time_seconds();
-                                        int y, m, d;
-                                        s64 now_days = now_sec / 86400;
-                                        if ((now_sec % 86400) < 0) now_days--;
-                                        days_to_ymd(now_days, &y, &m, &d);
-                                        s64 today_fire = ymd_to_days(y, m, d) * 86400LL + save.alarms[idx].hour * 3600LL + save.alarms[idx].minute * 60LL;
-                                        if (today_fire <= now_sec) {
-                                            save.alarms[idx].last_fired_epoch = today_fire;
-                                        } else {
-                                            save.alarms[idx].last_fired_epoch = today_fire - 86400LL;
-                                        }
-                                    }
-                                    save_write(&save);
+                                    alarm_toggle_entry(&save, idx);
                                 } else {
                                     alarm_list_state.selected_index = idx;
                                     edit_alarm_idx = idx;
@@ -608,7 +632,7 @@ int main(int argc, char* argv[])
 
                 case MODE_TIMER:
                     if (tmr.state == TMR_ADJUST) {
-                        if (tDown && touch_hit(touch.px, touch.py, &BTN_TMR_START)) {
+                        if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_TMR_START))) {
                             timer_start(&tmr);
                         } else {
                             hold_repeat_update(&hr_time[0], tHeld && touch_hit(touch.px, touch.py, &ARROW_H_UP));
@@ -626,14 +650,14 @@ int main(int argc, char* argv[])
                             if (hr_time[5].triggered) tmr.target_s = (tmr.target_s + 59) % 60;
                         }
                     } else if (tmr.state == TMR_RUNNING) {
-                        if (tDown && touch_hit(touch.px, touch.py, &BTN_TMR_PAUSE))
+                        if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_TMR_PAUSE)))
                             timer_pause(&tmr);
-                        else if (tDown && touch_hit(touch.px, touch.py, &BTN_TMR_RESET))
+                        else if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_TMR_RESET)))
                             timer_reset(&tmr);
                     } else if (tmr.state == TMR_PAUSED) {
-                        if (tDown && touch_hit(touch.px, touch.py, &BTN_TMR_RESUME))
+                        if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_TMR_RESUME)))
                             timer_resume(&tmr);
-                        else if (tDown && touch_hit(touch.px, touch.py, &BTN_TMR_RESET))
+                        else if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_TMR_RESET)))
                             timer_reset(&tmr);
                     }
                     break;
