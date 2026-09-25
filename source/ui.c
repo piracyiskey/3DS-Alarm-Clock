@@ -252,10 +252,132 @@ static void draw_time_editor(C2D_TextBuf buf, int h, int m, int s) {
 /*  Top Screen Display Functions (400×240)                            */
 /* ------------------------------------------------------------------ */
 
+void ui_draw_top_status_bar(C2D_TextBuf buf, u8 wifi_bars, u8 battery_percent,
+                            bool is_charging) {
+  /* Subtle status bar background strip (Y = 0..21, 1px bottom separator at Y =
+   * 21) */
+  C2D_DrawRectSolid(0.0f, 0.0f, 0.0f, 400.0f, 22.0f,
+                    C2D_Color32(0x22, 0x22, 0x22, 0xFF));
+  C2D_DrawRectSolid(0.0f, 21.0f, 0.0f, 400.0f, 1.0f,
+                    C2D_Color32(0x38, 0x38, 0x38, 0xFF));
+
+  /* ---------------- Left Section: Wi-Fi Status ---------------- */
+  C2D_Text txt_wifi;
+  C2D_TextParse(&txt_wifi, buf, "Wi-Fi");
+  C2D_TextOptimize(&txt_wifi);
+  C2D_DrawText(&txt_wifi, C2D_WithColor, 8.0f, 4.0f, 0.0f, 0.5f, 0.5f,
+               CLR_TEXT_DIM);
+
+  float tw, th;
+  C2D_TextGetDimensions(&txt_wifi, 0.5f, 0.5f, &tw, &th);
+
+  /* 3 procedural signal bars at X = 8 + tw + 6 */
+  float bar_base_x = 8.0f + tw + 6.0f;
+  float bar_bottom_y = 16.0f;
+  u32 dim_clr = C2D_Color32(0x55, 0x55, 0x55, 0xFF);
+
+  /* Bar 1: H = 4 */
+  u32 b1_clr = (wifi_bars >= 1) ? CLR_TEXT : dim_clr;
+  C2D_DrawRectSolid(bar_base_x + 0.0f, bar_bottom_y - 4.0f, 0.0f, 3.0f, 4.0f,
+                    b1_clr);
+
+  /* Bar 2: H = 7 */
+  u32 b2_clr = (wifi_bars >= 2) ? CLR_TEXT : dim_clr;
+  C2D_DrawRectSolid(bar_base_x + 5.0f, bar_bottom_y - 7.0f, 0.0f, 3.0f, 7.0f,
+                    b2_clr);
+
+  /* Bar 3: H = 10 */
+  u32 b3_clr = (wifi_bars >= 3) ? CLR_TEXT : dim_clr;
+  C2D_DrawRectSolid(bar_base_x + 10.0f, bar_bottom_y - 10.0f, 0.0f, 3.0f, 10.0f,
+                    b3_clr);
+
+  /* If Wi-Fi is 0 (disconnected / switch off), render a small "[Off]" label */
+  if (wifi_bars == 0) {
+    C2D_Text txt_off;
+    C2D_TextParse(&txt_off, buf, "Off");
+    C2D_TextOptimize(&txt_off);
+    C2D_DrawText(&txt_off, C2D_WithColor, bar_base_x + 16.0f, 4.0f, 0.0f, 0.5f,
+                 0.5f, C2D_Color32(0xC0, 0x50, 0x50, 0xFF));
+  }
+
+  /* ---------------- Right Section: Battery Status ---------------- */
+  /* Battery icon dimensions & placement */
+  float bat_right = 392.0f;
+  float bat_w = 22.0f;
+  float bat_h = 12.0f;
+  float bat_x = bat_right - bat_w - 2.0f; /* 368.0f */
+  float bat_y = 5.0f;
+
+  /* Terminal nipple on the right */
+  C2D_DrawRectSolid(bat_x + bat_w, bat_y + 3.0f, 0.0f, 2.0f, 6.0f, CLR_TAB_SEP);
+
+  /* Outer battery border */
+  C2D_DrawRectSolid(bat_x, bat_y, 0.0f, bat_w, bat_h, CLR_TAB_SEP);
+
+  /* Inner dark hollow */
+  C2D_DrawRectSolid(bat_x + 1.0f, bat_y + 1.0f, 0.0f, bat_w - 2.0f,
+                    bat_h - 2.0f, C2D_Color32(0x18, 0x18, 0x18, 0xFF));
+
+  /* Battery fill: max width = 18.0f */
+  float max_fill_w = bat_w - 4.0f; /* 18.0f */
+  float fill_w = (battery_percent * max_fill_w) / 100.0f;
+  if (fill_w < 1.0f && battery_percent > 0)
+    fill_w = 1.0f;
+  if (fill_w > max_fill_w)
+    fill_w = max_fill_w;
+
+  u32 fill_clr;
+  if (is_charging) {
+    fill_clr = C2D_Color32(0x40, 0xD0, 0x40, 0xFF); /* Green when charging */
+  } else if (battery_percent <= 15) {
+    fill_clr = C2D_Color32(0xD0, 0x30, 0x30, 0xFF); /* Red when critical */
+  } else if (battery_percent <= 30) {
+    fill_clr = C2D_Color32(0xD0, 0xA0, 0x20, 0xFF); /* Amber when low */
+  } else {
+    fill_clr = CLR_TEXT; /* Neutral white */
+  }
+
+  if (fill_w > 0.0f) {
+    C2D_DrawRectSolid(bat_x + 2.0f, bat_y + 2.0f, 0.0f, fill_w, bat_h - 4.0f,
+                      fill_clr);
+  }
+
+  /* Battery Percentage String */
+  char pct_str[16];
+  snprintf(pct_str, sizeof(pct_str), "%d%%", battery_percent);
+
+  C2D_Text txt_pct;
+  C2D_TextParse(&txt_pct, buf, pct_str);
+  C2D_TextOptimize(&txt_pct);
+
+  float pw, ph;
+  C2D_TextGetDimensions(&txt_pct, 0.5f, 0.5f, &pw, &ph);
+
+  float pct_x = bat_x - 6.0f - pw;
+  u32 pct_clr = is_charging ? C2D_Color32(0x40, 0xD0, 0x40, 0xFF) : CLR_TEXT;
+  C2D_DrawText(&txt_pct, C2D_WithColor, pct_x, 4.0f, 0.0f, 0.5f, 0.5f, pct_clr);
+
+  /* Charging Indicator: Procedural Lightning Bolt icon when charging */
+  if (is_charging) {
+    float bolt_x = pct_x - 12.0f;
+    float bolt_y = 5.0f;
+    u32 bolt_clr = C2D_Color32(0x40, 0xE0, 0x40, 0xFF);
+
+    /* Upper triangle */
+    C2D_DrawTriangle(bolt_x + 5.0f, bolt_y + 0.0f, bolt_clr, bolt_x + 1.0f,
+                     bolt_y + 6.0f, bolt_clr, bolt_x + 5.0f, bolt_y + 6.0f,
+                     bolt_clr, 0.0f);
+    /* Lower triangle */
+    C2D_DrawTriangle(bolt_x + 3.0f, bolt_y + 4.0f, bolt_clr, bolt_x + 7.0f,
+                     bolt_y + 4.0f, bolt_clr, bolt_x + 3.0f, bolt_y + 11.0f,
+                     bolt_clr, 0.0f);
+  }
+}
+
 void ui_draw_top_clock_with_date(C2D_TextBuf buf, int h, int m, int s,
                                  const char *date_str) {
   /* Telemetry header */
-  draw_text_centered_x(buf, "CLOCK", 35.0f, 0.55f, 400.0f);
+  draw_text_centered_x(buf, "CLOCK", 38.0f, 0.55f, 400.0f);
 
   /* Main digits at scale 2.0 */
   char str[16];
@@ -270,18 +392,18 @@ void ui_draw_top_clock_with_date(C2D_TextBuf buf, int h, int m, int s,
   C2D_TextGetDimensions(&text, scale, scale, &tw, &th);
 
   float x = (400.0f - tw) / 2.0f;
-  float y = 75.0f;
+  float y = 78.0f;
   C2D_DrawText(&text, C2D_WithColor, x, y, 0.0f, scale, scale, CLR_TEXT);
 
   /* Date display string below clock */
   if (date_str && date_str[0] != '\0') {
-    draw_text_centered_x(buf, date_str, 150.0f, 0.65f, 400.0f);
+    draw_text_centered_x(buf, date_str, 152.0f, 0.65f, 400.0f);
   }
 }
 
 void ui_draw_top_stopwatch(C2D_TextBuf buf, int hh, int mm, int ss, int cs,
                            bool show_hours) {
-  draw_text_centered_x(buf, "STOPWATCH", 45.0f, 0.55f, 400.0f);
+  draw_text_centered_x(buf, "STOPWATCH", 40.0f, 0.55f, 400.0f);
 
   char str[24];
   if (show_hours) {
@@ -299,12 +421,12 @@ void ui_draw_top_stopwatch(C2D_TextBuf buf, int hh, int mm, int ss, int cs,
   C2D_TextGetDimensions(&text, scale, scale, &tw, &th);
 
   float x = (400.0f - tw) / 2.0f;
-  float y = (240.0f - th) / 2.0f + 10.0f;
+  float y = (240.0f - th) / 2.0f + 14.0f;
   C2D_DrawText(&text, C2D_WithColor, x, y, 0.0f, scale, scale, CLR_TEXT);
 }
 
 void ui_draw_top_timer(C2D_TextBuf buf, int hh, int mm, int ss) {
-  draw_text_centered_x(buf, "TIMER", 45.0f, 0.55f, 400.0f);
+  draw_text_centered_x(buf, "TIMER", 40.0f, 0.55f, 400.0f);
 
   char str[16];
   snprintf(str, sizeof(str), "%02d:%02d:%02d", hh, mm, ss);
@@ -318,7 +440,7 @@ void ui_draw_top_timer(C2D_TextBuf buf, int hh, int mm, int ss) {
   C2D_TextGetDimensions(&text, scale, scale, &tw, &th);
 
   float x = (400.0f - tw) / 2.0f;
-  float y = (240.0f - th) / 2.0f + 10.0f;
+  float y = (240.0f - th) / 2.0f + 14.0f;
   C2D_DrawText(&text, C2D_WithColor, x, y, 0.0f, scale, scale, CLR_TEXT);
 }
 

@@ -252,3 +252,22 @@ void alarm_check_startup_missed(SaveData* save, AlarmSystem* sys, s64 now) {
     }
 }
 
+int alarm_calc_wrap_index(int current_idx, int total_count, int direction) {
+    if (total_count <= 0) return -1;
+    if (direction > 0) { /* Down / Next */
+        if (current_idx < 0) return 0;
+        return (current_idx + 1) % total_count;
+    } else if (direction < 0) { /* Up / Prev */
+        if (current_idx <= 0) return total_count - 1;
+        return current_idx - 1;
+    }
+    return current_idx;
+}
+
+void alarm_calc_viewport_scroll(float* scroll_y, int selected_idx) {
+    if (!scroll_y || selected_idx < 0) return;
+    float y = 36.0f - *scroll_y + selected_idx * 52.0f;
+    if (y > 146.0f) *scroll_y += (y - 146.0f);
+    if (y < 36.0f)  *scroll_y -= (36.0f - y);
+}
+

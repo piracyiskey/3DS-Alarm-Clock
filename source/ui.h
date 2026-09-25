@@ -97,6 +97,7 @@ extern const HitRect BTN_CONFIRM;
 /* --- Drawing functions --- */
 
 /* Top screen */
+void ui_draw_top_status_bar(C2D_TextBuf buf, u8 wifi_bars, u8 battery_percent, bool is_charging);
 void ui_draw_top_clock_with_date(C2D_TextBuf buf, int h, int m, int s, const char* date_str);
 void ui_draw_top_stopwatch(C2D_TextBuf buf, int hh, int mm, int ss, int cs, bool show_hours);
 void ui_draw_top_timer(C2D_TextBuf buf, int hh, int mm, int ss);

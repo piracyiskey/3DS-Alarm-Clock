@@ -25,6 +25,65 @@ static u32* SOC_buffer = NULL;
 
 static void socShutdown(void) { socExit(); }
 
+/* --- Telemetry Services (PTMU / MCUHWC) --- */
+static bool ptmu_ok = false;
+static bool mcuhwc_ok = false;
+
+static void telemetry_exit(void)
+{
+    if (mcuhwc_ok) { mcuHwcExit(); mcuhwc_ok = false; }
+    if (ptmu_ok)   { ptmuExit();   ptmu_ok = false;   }
+}
+
+static u8   telemetry_wifi_bars = 0;
+static u8   telemetry_battery_percent = 100;
+static bool telemetry_is_charging = false;
+static u32  telemetry_poll_counter = 0;
+
+static void telemetry_update(bool force)
+{
+    telemetry_poll_counter++;
+    if (!force && telemetry_poll_counter < 60) return;
+    telemetry_poll_counter = 0;
+
+    /* 1. Wi-Fi signal strength (0..3) */
+    telemetry_wifi_bars = osGetWifiStrength();
+
+    /* 2. Battery percentage: MCUHWC with PTMU fallback */
+    bool got_percent = false;
+    if (mcuhwc_ok) {
+        u8 level = 0;
+        if (R_SUCCEEDED(MCUHWC_GetBatteryLevel(&level))) {
+            telemetry_battery_percent = (level > 100) ? 100 : level;
+            got_percent = true;
+        }
+    }
+
+    if (!got_percent && ptmu_ok) {
+        u8 ptm_level = 0;
+        if (R_SUCCEEDED(PTMU_GetBatteryLevel(&ptm_level))) {
+            switch (ptm_level) {
+            case 0:  telemetry_battery_percent = 5;   break;
+            case 1:  telemetry_battery_percent = 20;  break;
+            case 2:  telemetry_battery_percent = 40;  break;
+            case 3:  telemetry_battery_percent = 70;  break;
+            case 4:  telemetry_battery_percent = 90;  break;
+            case 5:
+            default: telemetry_battery_percent = 100; break;
+            }
+        }
+    }
+
+    /* 3. Charging status via PTMU */
+    if (ptmu_ok) {
+        u8 charge_state = 0;
+        if (R_SUCCEEDED(PTMU_GetBatteryChargeState(&charge_state))) {
+            telemetry_is_charging = (charge_state != 0);
+        }
+    }
+}
+
+
 static aptHookCookie apt_cookie;
 
 static void apt_hook_callback(APT_HookType hook, void* param) {
@@ -172,6 +231,10 @@ int main(int argc, char* argv[])
     atexit(audio_exit);
     aptHook(&apt_cookie, apt_hook_callback, NULL);
 
+    ptmu_ok = R_SUCCEEDED(ptmuInit());
+    mcuhwc_ok = R_SUCCEEDED(mcuHwcInit());
+    atexit(telemetry_exit);
+
     /* --- Clock & Save init --- */
     SaveData save;
     bool is_first_boot = false;
@@ -218,23 +281,36 @@ int main(int argc, char* argv[])
     HoldRepeat hr_time[6];      /* h↑ h↓ m↑ m↓ s↑ s↓ */
     HoldRepeat hr_date[6];      /* col1↑ col1↓ col2↑ col2↓ col3↑ col3↓ */
     HoldRepeat hr_alarm[4];     /* alarm h↑ h↓ m↑ m↓ */
-    HoldRepeat hr_dpad[2];      /* dpad up, dpad down */
+    HoldRepeat hr_nav[2];       /* unified nav up, nav down (D-Pad + Circle Pad) */
     memset(hr_time, 0, sizeof(hr_time));
     memset(hr_date, 0, sizeof(hr_date));
     memset(hr_alarm, 0, sizeof(hr_alarm));
-    memset(hr_dpad, 0, sizeof(hr_dpad));
+    memset(hr_nav, 0, sizeof(hr_nav));
+
+    telemetry_update(true);
 
     /* === Main loop === */
     while (aptMainLoop()) {
         alarm_tick(&save, &alarm_sys);
         audio_tick();
+        telemetry_update(false);
 
         hidScanInput();
         u32 kDown = hidKeysDown();
         u32 kHeld = hidKeysHeld();
 
-        hold_repeat_update_ex(&hr_dpad[0], (kHeld & KEY_DUP) != 0, 25, 6);
-        hold_repeat_update_ex(&hr_dpad[1], (kHeld & KEY_DDOWN) != 0, 25, 6);
+        circlePosition circle;
+        hidCircleRead(&circle);
+
+        bool nav_up_held   = ((kHeld & KEY_DUP) != 0)   || (circle.dy > 40);
+        bool nav_down_held = ((kHeld & KEY_DDOWN) != 0) || (circle.dy < -40);
+        if (nav_up_held && nav_down_held) {
+            nav_up_held = false;
+            nav_down_held = false;
+        }
+
+        hold_repeat_update_ex(&hr_nav[0], nav_up_held, 25, 6);
+        hold_repeat_update_ex(&hr_nav[1], nav_down_held, 25, 6);
 
         if (kDown & KEY_START) break;
 
@@ -527,25 +603,12 @@ int main(int argc, char* argv[])
                         edit_alarm_tone = a->ringtone_id;
                         memset(hr_alarm, 0, sizeof(hr_alarm));
                         show_delete_confirm = false;
-                        alarm_view = STATE_ALARM_EDIT;
-                    } else if (save.alarm_count > 0 && hr_dpad[1].triggered) { /* DDOWN continuous hold-repeat with circular wrap */
-                        if (alarm_list_state.selected_index < 0) {
-                            alarm_list_state.selected_index = 0;
-                        } else {
-                            alarm_list_state.selected_index = (alarm_list_state.selected_index + 1) % save.alarm_count;
-                        }
-                        float y = 36.0f - alarm_list_state.scroll_y + alarm_list_state.selected_index * 52.0f;
-                        if (y > 146.0f) alarm_list_state.scroll_y += (y - 146.0f);
-                        if (y < 36.0f) alarm_list_state.scroll_y -= (36.0f - y);
-                    } else if (save.alarm_count > 0 && hr_dpad[0].triggered) { /* DUP continuous hold-repeat with circular wrap */
-                        if (alarm_list_state.selected_index <= 0) {
-                            alarm_list_state.selected_index = save.alarm_count - 1;
-                        } else {
-                            alarm_list_state.selected_index--;
-                        }
-                        float y = 36.0f - alarm_list_state.scroll_y + alarm_list_state.selected_index * 52.0f;
-                        if (y < 36.0f) alarm_list_state.scroll_y -= (36.0f - y);
-                        if (y > 146.0f) alarm_list_state.scroll_y += (y - 146.0f);
+                    } else if (save.alarm_count > 0 && hr_nav[1].triggered) { /* DOWN continuous hold-repeat (D-Pad + Circle Pad) with circular wrap */
+                        alarm_list_state.selected_index = alarm_calc_wrap_index(alarm_list_state.selected_index, save.alarm_count, +1);
+                        alarm_calc_viewport_scroll(&alarm_list_state.scroll_y, alarm_list_state.selected_index);
+                    } else if (save.alarm_count > 0 && hr_nav[0].triggered) { /* UP continuous hold-repeat (D-Pad + Circle Pad) with circular wrap */
+                        alarm_list_state.selected_index = alarm_calc_wrap_index(alarm_list_state.selected_index, save.alarm_count, -1);
+                        alarm_calc_viewport_scroll(&alarm_list_state.scroll_y, alarm_list_state.selected_index);
                     } else if (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_ADD)) {
                         if (save.alarm_count < MAX_ALARMS) {
                             edit_alarm_idx = -1;
@@ -700,6 +763,11 @@ int main(int argc, char* argv[])
             ui_draw_top_timer(textBuf, th, tm, ts);
         }
 
+        /* Persistent Top Screen Telemetry Status Bar */
+        if (alarm_sys.state != ALARM_STATE_RINGING) {
+            ui_draw_top_status_bar(textBuf, telemetry_wifi_bars, telemetry_battery_percent, telemetry_is_charging);
+        }
+
         /* --- Bottom Screen Rendering --- */
         C2D_TargetClear(bot, CLR_BG);
         C2D_SceneBegin(bot);
@@ -799,6 +867,7 @@ int main(int argc, char* argv[])
     C2D_Fini();
     C3D_Fini();
     cfguExit();
+    telemetry_exit();
     gfxExit();
     return 0;
 }
