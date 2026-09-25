@@ -603,6 +603,7 @@ int main(int argc, char* argv[])
                         edit_alarm_tone = a->ringtone_id;
                         memset(hr_alarm, 0, sizeof(hr_alarm));
                         show_delete_confirm = false;
+                        alarm_view = STATE_ALARM_EDIT;
                     } else if (save.alarm_count > 0 && hr_nav[1].triggered) { /* DOWN continuous hold-repeat (D-Pad + Circle Pad) with circular wrap */
                         alarm_list_state.selected_index = alarm_calc_wrap_index(alarm_list_state.selected_index, save.alarm_count, +1);
                         alarm_calc_viewport_scroll(&alarm_list_state.scroll_y, alarm_list_state.selected_index);
