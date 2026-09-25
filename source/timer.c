@@ -81,7 +81,6 @@ void timer_get_display(Timer* tmr, int* hh, int* mm, int* ss)
             remain_ms = tmr->deadline_ms - now;
         } else {
             remain_ms = 0;
-            tmr->state = TMR_EXPIRED;
         }
     } else if (tmr->state == TMR_PAUSED) {
         remain_ms = tmr->remaining_at_pause_ms;

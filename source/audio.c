@@ -21,10 +21,16 @@ extern const u8 default_alarm_bin[];
 extern const u8 default_alarm_bin_end[];
 extern const u8 lofi_bin[];
 extern const u8 lofi_bin_end[];
+extern const u8 timer_bin[];
+extern const u8 timer_bin_end[];
 
 /* Registry of available ringtones */
 static RingtoneInfo ringtones[2 + AUDIO_MAX_USER_TONES];
 static int ringtone_count = 0;
+
+/* Dedicated Timer Ringtone */
+static RingtoneInfo  s_timer_tone;
+static bool          s_is_timer_active    = false;
 
 /* Playback engine state */
 static u8            s_active_ringtone_id = 0;
@@ -79,7 +85,7 @@ static void audio_thread_entry(void* arg) {
 
 /* Refill a single wave buffer and submit to NDSP */
 static void refill_and_queue_buffer(int buf_idx) {
-    RingtoneInfo* info = &ringtones[s_active_ringtone_id];
+    RingtoneInfo* info = s_is_timer_active ? &s_timer_tone : &ringtones[s_active_ringtone_id];
     u32 frame_size = s_current_channels * sizeof(s16);
     u32 target_bytes = AUDIO_SAMPLES_PER_BUF * frame_size;
     u8* dest = (u8*)s_waveBuf[buf_idx].data_vaddr;
@@ -242,13 +248,24 @@ void audio_init(void) {
     mkdir("sdmc:/3ds/3ds-clock", 0777);
     mkdir("sdmc:/3ds/3ds-clock/ringtones", 0777);
 
+    /* Dedicated Timer Tone Setup */
+    strncpy(s_timer_tone.name, "Timer", 31);
+    s_timer_tone.name[31] = '\0';
+    s_timer_tone.source = RINGTONE_SRC_BUILTIN;
+    s_timer_tone.pcm_data = timer_bin;
+    s_timer_tone.pcm_size = (u32)(timer_bin_end - timer_bin);
+    s_timer_tone.sample_rate = 22050;
+    s_timer_tone.channels = 2;
+    s_timer_tone.sd_path[0] = '\0';
+
     audio_scan_sd_ringtones();
 }
 
 static void audio_stop_internal(void) {
-    if (!s_is_playing && !s_mpg) return;
+    if (!s_is_playing && !s_mpg && !s_is_timer_active) return;
 
     s_is_playing = false;
+    s_is_timer_active = false;
 
     ndspChnReset(0);
     ndspChnWaveBufClear(0);
@@ -272,6 +289,7 @@ void audio_play(u8 ringtone_id) {
     LightLock_Lock(&s_audio_lock);
 
     audio_stop_internal();
+    s_is_timer_active = false;
 
     if (ringtone_id >= ringtone_count) {
         ringtone_id = 0;
@@ -310,6 +328,33 @@ void audio_play(u8 ringtone_id) {
         s_current_channels = info->channels;
         s_pcm_offset = 0;
     }
+
+    /* Configure NDSP Channel 0 */
+    ndspChnReset(0);
+    ndspChnSetInterp(0, NDSP_INTERP_POLYPHASE);
+    ndspChnSetRate(0, (float)s_current_rate);
+    ndspChnSetFormat(0, (s_current_channels == 1) ? NDSP_FORMAT_MONO_PCM16 : NDSP_FORMAT_STEREO_PCM16);
+    audio_set_volume(s_volume);
+
+    /* Prime and queue initial wave buffers */
+    for (int i = 0; i < AUDIO_NUM_BUFFERS; i++) {
+        s_waveBuf[i].status = NDSP_WBUF_DONE;
+        refill_and_queue_buffer(i);
+    }
+
+    s_is_playing = true;
+    LightLock_Unlock(&s_audio_lock);
+}
+
+void audio_play_timer(void) {
+    LightLock_Lock(&s_audio_lock);
+
+    audio_stop_internal();
+    s_is_timer_active = true;
+
+    s_current_rate = s_timer_tone.sample_rate;
+    s_current_channels = s_timer_tone.channels;
+    s_pcm_offset = 0;
 
     /* Configure NDSP Channel 0 */
     ndspChnReset(0);

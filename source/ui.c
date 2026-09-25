@@ -102,6 +102,7 @@ const HitRect BTN_ALARM_TONE_RIGHT = {ALARM_SEL_BTN_RIGHT_X, ALARM_SEL_TONE_Y,
                                       ALARM_SEL_BTN_W, ALARM_SEL_ROW_H};
 const HitRect BTN_ALARM_DISMISS = {60.0f, 140.0f, 200.0f, 40.0f};
 const HitRect BTN_ALARM_MISSED_OK = {60.0f, 140.0f, 200.0f, 40.0f};
+const HitRect BTN_TIMER_DISMISS = {60.0f, 140.0f, 200.0f, 40.0f};
 
 /* Dedicated 2-Column Alarm Stepper Arrows — col centers x=105, 215; Y estimated
  * for scale 1.5 dh≈28 */
@@ -854,10 +855,51 @@ void ui_draw_timer_paused(C2D_TextBuf buf) {
   draw_button(buf, &BTN_TMR_RESET, "Reset");
 }
 
-void ui_draw_timer_expired_modal(C2D_TextBuf buf) {
-  draw_modal_bg();
-  draw_text_centered_x(buf, "Timer Expired!", 85.0f, 0.85f, 320.0f);
-  draw_button(buf, &BTN_OK, "OK");
+void ui_draw_timer_ringing_top(C2D_TextBuf buf, int h, int m, int s,
+                               u32 frame_counter) {
+  /* Dark Blue solid fill */
+  C2D_DrawRectSolid(0, 0, 0, 400, 240, C2D_Color32(0x00, 0x14, 0x30, 0xFF));
+
+  /* Header */
+  draw_text_centered_x(buf, "TIMER", 30.0f, 1.0f, 400.0f);
+
+  /* Time text with fading / blinking alpha modulation */
+  float alpha = 0.6f + 0.4f * sinf(frame_counter * 0.08f);
+  if (alpha < 0.2f) alpha = 0.2f;
+  if (alpha > 1.0f) alpha = 1.0f;
+  u32 blink_clr = C2D_Color32(0xFF, 0xFF, 0xFF, (u8)(alpha * 255.0f));
+
+  char time_str[16];
+  snprintf(time_str, sizeof(time_str), "%02d:%02d:%02d", h, m, s);
+
+  C2D_Text t;
+  C2D_TextParse(&t, buf, time_str);
+  C2D_TextOptimize(&t);
+
+  float tw, th;
+  C2D_TextGetDimensions(&t, 1.8f, 1.8f, &tw, &th);
+  C2D_DrawText(&t, C2D_WithColor, (400.0f - tw) / 2.0f, 85.0f, 0.0f, 1.8f,
+               1.8f, blink_clr);
+
+  /* Subtext */
+  draw_text_centered_x(buf, "Time Up!", 150.0f, 0.75f, 400.0f);
+}
+
+void ui_draw_timer_ringing_bottom(C2D_TextBuf buf, int h, int m, int s) {
+  C2D_DrawRectSolid(0, 0, 0, 320, 240, CLR_OVERLAY);
+  C2D_DrawRectSolid(20, 20, 0, 280, 200, CLR_MODAL_BG);
+
+  draw_text_centered_x(buf, "TIMER", 35.0f, 0.9f, 320.0f);
+
+  char time_str[16];
+  snprintf(time_str, sizeof(time_str), "%02d:%02d:%02d", h, m, s);
+  draw_text_centered_x(buf, time_str, 65.0f, 1.4f, 320.0f);
+
+  draw_text_centered_x(buf, "Time Up!", 105.0f, 0.7f, 320.0f);
+
+  /* Dismiss Button in Dark Blue */
+  draw_button_scaled(buf, &BTN_TIMER_DISMISS, "DISMISS", 0.70f,
+                     C2D_Color32(0x18, 0x48, 0x8A, 0xFF));
 }
 
 /* ------------------------------------------------------------------ */

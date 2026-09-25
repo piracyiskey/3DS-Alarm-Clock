@@ -260,6 +260,9 @@ int main(int argc, char* argv[])
 
     Timer tmr;
     timer_init(&tmr);
+    bool timer_ringing = false;
+    s64  timer_ring_start_epoch = 0;
+    u32  timer_ring_frames = 0;
 
     AlarmSystem alarm_sys;
     alarm_sys_init(&alarm_sys);
@@ -319,8 +322,43 @@ int main(int argc, char* argv[])
         bool tDown = (kDown & KEY_TOUCH) != 0;
         bool tHeld = (kHeld & KEY_TOUCH) != 0;
 
-        /* Update timer expiration status */
-        timer_is_expired(&tmr);
+        /* Update timer expiration status & trigger */
+        bool tmr_expired_now = false;
+        if (tmr.state == TMR_RUNNING && osGetTime() >= tmr.deadline_ms) {
+            tmr.state = TMR_EXPIRED;
+            tmr_expired_now = true;
+        } else if (tmr.state == TMR_EXPIRED && !timer_ringing) {
+            tmr_expired_now = true;
+        }
+
+        /* Strict Conflict Resolution: Alarm strictly takes priority over Timer */
+        if (alarm_sys.state == ALARM_STATE_RINGING) {
+            /* Scenario A: If timer was already ringing and alarm fires -> dismiss timer immediately */
+            /* Scenario B: If timer expires while alarm is ringing -> dismiss timer silently, no modal, no audio */
+            /* Scenario C: Simultaneous trigger on same frame -> Alarm wins, timer dismissed */
+            if (timer_ringing || tmr_expired_now) {
+                timer_ringing = false;
+                timer_dismiss(&tmr);
+            }
+        } else {
+            /* Alarm is not ringing */
+            if (tmr_expired_now) {
+                timer_ringing = true;
+                timer_ring_start_epoch = get_display_time_seconds();
+                timer_ring_frames = 0;
+                audio_play_timer();
+            }
+
+            /* 5-minute (300-second) auto-silence timeout for Timer */
+            if (timer_ringing) {
+                s64 now_sec = get_display_time_seconds();
+                if (now_sec - timer_ring_start_epoch >= 300) {
+                    timer_ringing = false;
+                    audio_stop();
+                    timer_dismiss(&tmr);
+                }
+            }
+        }
 
         /* ========================================================== */
         /*  Input Handling                                            */
@@ -340,17 +378,18 @@ int main(int argc, char* argv[])
                 alarm_dismiss_all(&save, &alarm_sys);
             }
         }
+        else if (timer_ringing) {
+            /* Timer ringing overlay dismiss (touch or KEY_A / KEY_B) */
+            if ((kDown & (KEY_A | KEY_B)) || (tDown && touch_hit(touch.px, touch.py, &BTN_TIMER_DISMISS))) {
+                timer_ringing = false;
+                audio_stop();
+                timer_dismiss(&tmr);
+            }
+        }
         else if (alarm_sys.missed_alarm) {
             /* Missed alarm modal dismiss */
             if ((kDown & (KEY_A | KEY_B)) || (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_MISSED_OK))) {
                 alarm_sys.missed_alarm = false;
-            }
-        }
-        else if (!is_settings && active_mode == MODE_TIMER && tmr.state == TMR_EXPIRED) {
-            /* Timer expired modal */
-            if ((kDown & (KEY_A | KEY_B)) ||
-                (tDown && touch_hit(touch.px, touch.py, &BTN_OK))) {
-                timer_dismiss(&tmr);
             }
         }
         else if (is_settings) {
@@ -695,7 +734,10 @@ int main(int argc, char* argv[])
                     break;
 
                 case MODE_TIMER:
-                    if (tmr.state == TMR_ADJUST) {
+                    if (tmr.state == TMR_ADJUST || tmr.state == TMR_EXPIRED) {
+                        if (tmr.state == TMR_EXPIRED) {
+                            tmr.state = TMR_ADJUST;
+                        }
                         if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_TMR_START))) {
                             timer_start(&tmr);
                         } else {
@@ -744,6 +786,9 @@ int main(int argc, char* argv[])
             int first_ringing = __builtin_ctz(alarm_sys.ringing_mask);
             ui_draw_alarm_ringing_top(textBuf, save.alarms[first_ringing].hour, save.alarms[first_ringing].minute, save.alarms[first_ringing].repeat_mode, alarm_sys.ring_frames);
             alarm_sys.ring_frames++;
+        } else if (timer_ringing) {
+            ui_draw_timer_ringing_top(textBuf, tmr.target_h, tmr.target_m, tmr.target_s, timer_ring_frames);
+            timer_ring_frames++;
         } else if (is_settings || active_mode == MODE_ALARM || active_mode == MODE_CLOCK) {
             int h, m, s;
             int y, mo, d;
@@ -765,7 +810,7 @@ int main(int argc, char* argv[])
         }
 
         /* Persistent Top Screen Telemetry Status Bar */
-        if (alarm_sys.state != ALARM_STATE_RINGING) {
+        if (alarm_sys.state != ALARM_STATE_RINGING && !timer_ringing) {
             ui_draw_top_status_bar(textBuf, telemetry_wifi_bars, telemetry_battery_percent, telemetry_is_charging);
         }
 
@@ -776,6 +821,8 @@ int main(int argc, char* argv[])
         if (alarm_sys.state == ALARM_STATE_RINGING) {
             int first_ringing = __builtin_ctz(alarm_sys.ringing_mask);
             ui_draw_alarm_ringing_bottom(textBuf, save.alarms[first_ringing].hour, save.alarms[first_ringing].minute, save.alarms[first_ringing].repeat_mode);
+        } else if (timer_ringing) {
+            ui_draw_timer_ringing_bottom(textBuf, tmr.target_h, tmr.target_m, tmr.target_s);
         } else if (alarm_sys.missed_alarm) {
             ui_draw_alarm_missed_modal(textBuf, alarm_sys.missed_count);
         } else if (is_first_boot) {
@@ -836,23 +883,17 @@ int main(int argc, char* argv[])
                 break;
 
             case MODE_TIMER:
-                if (tmr.state == TMR_ADJUST)
+                if (tmr.state == TMR_ADJUST || tmr.state == TMR_EXPIRED)
                     ui_draw_timer_adjust(textBuf, tmr.target_h, tmr.target_m, tmr.target_s);
                 else if (tmr.state == TMR_RUNNING)
                     ui_draw_timer_running(textBuf);
                 else if (tmr.state == TMR_PAUSED)
                     ui_draw_timer_paused(textBuf);
-                else if (tmr.state == TMR_EXPIRED) {
-                    ui_draw_timer_adjust(textBuf, tmr.target_h, tmr.target_m, tmr.target_s);
-                    ui_draw_timer_expired_modal(textBuf);
-                }
                 break;
             }
 
-            /* Draw persistent tab bar if timer modal is not active */
-            if (tmr.state != TMR_EXPIRED) {
-                ui_draw_tab_bar(textBuf, active_mode);
-            }
+            /* Draw persistent tab bar */
+            ui_draw_tab_bar(textBuf, active_mode);
         }
 
         C3D_FrameEnd(0);

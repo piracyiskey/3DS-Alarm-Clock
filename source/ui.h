@@ -77,6 +77,7 @@ extern const HitRect BTN_ALARM_TONE_LEFT;
 extern const HitRect BTN_ALARM_TONE_RIGHT;
 extern const HitRect BTN_ALARM_DISMISS;
 extern const HitRect BTN_ALARM_MISSED_OK;
+extern const HitRect BTN_TIMER_DISMISS;
 
 /* Dedicated 2-Column Alarm Stepper Arrows */
 extern const HitRect ARROW_ALARM_H_UP,   ARROW_ALARM_H_DOWN;
@@ -131,7 +132,8 @@ void ui_draw_stopwatch_paused(C2D_TextBuf buf);
 void ui_draw_timer_adjust(C2D_TextBuf buf, int h, int m, int s);
 void ui_draw_timer_running(C2D_TextBuf buf);
 void ui_draw_timer_paused(C2D_TextBuf buf);
-void ui_draw_timer_expired_modal(C2D_TextBuf buf);
+void ui_draw_timer_ringing_top(C2D_TextBuf buf, int h, int m, int s, u32 frame_counter);
+void ui_draw_timer_ringing_bottom(C2D_TextBuf buf, int h, int m, int s);
 
 /* Bottom screen — Settings overlay screens */
 void ui_draw_settings_main(C2D_TextBuf buf);
