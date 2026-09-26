@@ -42,3 +42,7 @@ bool        audio_is_playing(void);
 /* Volume & Mixing (0.0f = silent, 1.0f = full volume) */
 void        audio_set_volume(float volume);
 float       audio_get_volume(void);
+
+/* Suspend & Resume for APT transitions (e.g. HOME Menu) */
+void        audio_suspend(void);
+void        audio_resume(void);

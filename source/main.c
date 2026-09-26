@@ -27,16 +27,17 @@ static u32* SOC_buffer = NULL;
 static void socShutdown(void) { socExit(); }
 
 /* --- Display & Power Management --- */
-static bool gsplcd_ok = false;
 static DisplayPowerMode s_screen_mode = SCREEN_MODE_ALL_ON;
 static u32 s_lr_debounce = 0;
 
 static void lcd_cleanup(void)
 {
-    if (gsplcd_ok) {
-        GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH);
-        gspLcdExit();
-        gsplcd_ok = false;
+    if (s_screen_mode != SCREEN_MODE_ALL_ON) {
+        if (R_SUCCEEDED(gspLcdInit())) {
+            GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH);
+            gspLcdExit();
+        }
+        s_screen_mode = SCREEN_MODE_ALL_ON;
     }
 }
 
@@ -44,29 +45,30 @@ static void set_screen_mode(DisplayPowerMode new_mode)
 {
     if (new_mode == s_screen_mode) return;
 
-    switch (new_mode) {
-    case SCREEN_MODE_ALL_ON:
-        GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH);
-        break;
-    case SCREEN_MODE_BOTTOM_OFF:
-        GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_TOP);
-        GSPLCD_PowerOffBacklight(GSPLCD_SCREEN_BOTTOM);
-        break;
-    case SCREEN_MODE_ALL_OFF:
-        GSPLCD_PowerOffBacklight(GSPLCD_SCREEN_BOTH);
-        break;
+    if (R_SUCCEEDED(gspLcdInit())) {
+        switch (new_mode) {
+        case SCREEN_MODE_ALL_ON:
+            GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH);
+            break;
+        case SCREEN_MODE_BOTTOM_OFF:
+            GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_TOP);
+            GSPLCD_PowerOffBacklight(GSPLCD_SCREEN_BOTTOM);
+            break;
+        case SCREEN_MODE_ALL_OFF:
+            GSPLCD_PowerOffBacklight(GSPLCD_SCREEN_BOTH);
+            break;
+        }
+        gspLcdExit();
     }
     s_screen_mode = new_mode;
 }
 
 /* --- Telemetry Services (PTMU / MCUHWC) --- */
 static bool ptmu_ok = false;
-static bool mcuhwc_ok = false;
 
 static void telemetry_exit(void)
 {
-    if (mcuhwc_ok) { mcuHwcExit(); mcuhwc_ok = false; }
-    if (ptmu_ok)   { ptmuExit();   ptmu_ok = false;   }
+    if (ptmu_ok) { ptmuExit(); ptmu_ok = false; }
 }
 
 static u8   telemetry_wifi_bars = 0;
@@ -83,14 +85,17 @@ static void telemetry_update(bool force)
     /* 1. Wi-Fi signal strength (0..3) */
     telemetry_wifi_bars = osGetWifiStrength();
 
-    /* 2. Battery percentage: MCUHWC with PTMU fallback */
+    /* 2. Battery percentage: MCUHWC with PTMU fallback.
+     * Open mcu::HWC on-demand only for the read and close immediately
+     * so that the single-session MCU service port is never held open. */
     bool got_percent = false;
-    if (mcuhwc_ok) {
+    if (R_SUCCEEDED(mcuHwcInit())) {
         u8 level = 0;
         if (R_SUCCEEDED(MCUHWC_GetBatteryLevel(&level))) {
             telemetry_battery_percent = (level > 100) ? 100 : level;
             got_percent = true;
         }
+        mcuHwcExit();
     }
 
     if (!got_percent && ptmu_ok) {
@@ -122,11 +127,43 @@ static aptHookCookie apt_cookie;
 
 static void apt_hook_callback(APT_HookType hook, void* param) {
     (void)param;
-    if (hook == APTHOOK_ONRESTORE || hook == APTHOOK_ONWAKEUP) {
-        /* Console just woke from sleep. Restore backlights if operating normally. */
-        if (gsplcd_ok && s_screen_mode == SCREEN_MODE_ALL_ON) {
-            GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH);
+    if (hook == APTHOOK_ONSUSPEND) {
+        /* App is being suspended (e.g. HOME button or sleep).
+         * 1. Flush any pending background save so disk I/O settles cleanly. */
+        save_flush();
+
+        /* 2. Suspend audio so NDSP/DSP operations pause cleanly before DSP sleep. */
+        audio_suspend();
+
+        /* 3. Turn both LCD backlights ON so Home Menu is fully visible and usable. */
+        if (s_screen_mode != SCREEN_MODE_ALL_ON) {
+            if (R_SUCCEEDED(gspLcdInit())) {
+                GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH);
+                gspLcdExit();
+            }
         }
+    } else if (hook == APTHOOK_ONRESTORE || hook == APTHOOK_ONWAKEUP) {
+        /* App is being restored from Home Menu or waking from sleep.
+         * 1. Restore LCD backlight mode matching current s_screen_mode. */
+        if (s_screen_mode != SCREEN_MODE_ALL_ON) {
+            if (R_SUCCEEDED(gspLcdInit())) {
+                if (s_screen_mode == SCREEN_MODE_BOTTOM_OFF) {
+                    GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_TOP);
+                    GSPLCD_PowerOffBacklight(GSPLCD_SCREEN_BOTTOM);
+                } else if (s_screen_mode == SCREEN_MODE_ALL_OFF) {
+                    GSPLCD_PowerOffBacklight(GSPLCD_SCREEN_BOTH);
+                }
+                gspLcdExit();
+            }
+        } else {
+            if (R_SUCCEEDED(gspLcdInit())) {
+                GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH);
+                gspLcdExit();
+            }
+        }
+
+        /* 2. Safely resume audio playback if an alarm/timer was active. */
+        audio_resume();
     }
 }
 
@@ -248,10 +285,7 @@ int main(int argc, char* argv[])
         link3dsStdio();
     }
 
-    gsplcd_ok = R_SUCCEEDED(gspLcdInit());
-    if (gsplcd_ok) {
-        atexit(lcd_cleanup);
-    }
+    atexit(lcd_cleanup);
 
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
@@ -271,10 +305,10 @@ int main(int argc, char* argv[])
 
     audio_init();
     atexit(audio_exit);
+    aptSetHomeAllowed(true);
     aptHook(&apt_cookie, apt_hook_callback, NULL);
 
     ptmu_ok = R_SUCCEEDED(ptmuInit());
-    mcuhwc_ok = R_SUCCEEDED(mcuHwcInit());
     atexit(telemetry_exit);
 
     /* --- Clock & Save init --- */
@@ -1006,7 +1040,5 @@ int main(int argc, char* argv[])
     C2D_Fini();
     C3D_Fini();
     cfguExit();
-    telemetry_exit();
-    gfxExit();
     return 0;
 }

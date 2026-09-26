@@ -35,6 +35,7 @@ static bool          s_is_timer_active    = false;
 /* Playback engine state */
 static u8            s_active_ringtone_id = 0;
 static volatile bool s_is_playing         = false;
+static volatile bool s_audio_suspended     = false;
 static volatile bool s_audio_quit         = false;
 static float         s_volume             = 1.0f;
 
@@ -69,7 +70,7 @@ static void audio_thread_entry(void* arg) {
     (void)arg;
     while (!s_audio_quit) {
         LightLock_Lock(&s_audio_lock);
-        if (s_is_playing) {
+        if (s_is_playing && !s_audio_suspended) {
             for (int i = 0; i < AUDIO_NUM_BUFFERS; i++) {
                 if (s_waveBuf[i].status == NDSP_WBUF_DONE) {
                     refill_and_queue_buffer(i);
@@ -382,6 +383,34 @@ void audio_tick(void) {
 
 bool audio_is_playing(void) {
     return s_is_playing;
+}
+
+void audio_suspend(void) {
+    LightLock_Lock(&s_audio_lock);
+    s_audio_suspended = true;
+    if (s_is_playing) {
+        ndspChnReset(0);
+    }
+    LightLock_Unlock(&s_audio_lock);
+}
+
+void audio_resume(void) {
+    LightLock_Lock(&s_audio_lock);
+    s_audio_suspended = false;
+    if (s_is_playing) {
+        ndspChnReset(0);
+        ndspChnSetInterp(0, NDSP_INTERP_POLYPHASE);
+        ndspChnSetRate(0, (float)s_current_rate);
+        ndspChnSetFormat(0, (s_current_channels == 1) ? NDSP_FORMAT_MONO_PCM16 : NDSP_FORMAT_STEREO_PCM16);
+        audio_set_volume(s_volume);
+
+        for (int i = 0; i < AUDIO_NUM_BUFFERS; i++) {
+            s_waveBuf[i].status = NDSP_WBUF_DONE;
+            refill_and_queue_buffer(i);
+        }
+    }
+    LightLock_Unlock(&s_audio_lock);
+    LightEvent_Signal(&s_audio_event);
 }
 
 void audio_exit(void) {
