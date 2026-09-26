@@ -114,9 +114,14 @@ const HitRect ARROW_ALARM_M_DOWN = {190.0f, 89.0f, 50.0f, 28.0f};
 /* Settings overlay buttons */
 const HitRect BTN_SET_BACK = {10.0f, 4.0f, 70.0f, 28.0f};
 const HitRect BTN_SET_SAVE = {240.0f, 4.0f, 70.0f, 28.0f};
-const HitRect BTN_SET_EDIT = {50.0f, 68.0f, 220.0f, 44.0f};
-const HitRect BTN_SET_RESET = {50.0f, 132.0f, 220.0f, 44.0f};
+const HitRect BTN_SET_EDIT = {40.0f, 56.0f, 240.0f, 40.0f};
+const HitRect BTN_SET_RESET = {40.0f, 112.0f, 240.0f, 40.0f};
+const HitRect BTN_SET_DISPLAY = {40.0f, 168.0f, 240.0f, 40.0f};
 const HitRect BTN_EDIT_DATE = {80.0f, BOTTOM_ACTION_Y, 160.0f, 30.0f};
+
+/* Display & Power Sub-Menu Buttons */
+const HitRect BTN_DISP_BOTH_OFF = {40.0f, 72.0f, 240.0f, 48.0f};
+const HitRect BTN_DISP_BOT_OFF  = {40.0f, 136.0f, 240.0f, 48.0f};
 
 /* Modal buttons */
 const HitRect BTN_OK = {110.0f, 145.0f, 100.0f, 40.0f};
@@ -916,6 +921,23 @@ void ui_draw_settings_main(C2D_TextBuf buf) {
   /* Main option buttons */
   draw_button(buf, &BTN_SET_EDIT, "Edit Time & Date");
   draw_button(buf, &BTN_SET_RESET, "Reset Time & Date");
+  draw_button(buf, &BTN_SET_DISPLAY, "Display & Power");
+}
+
+void ui_draw_settings_display(C2D_TextBuf buf) {
+  /* Nav bar (y=0..36) */
+  C2D_DrawRectSolid(0.0f, 0.0f, 0.0f, 320.0f, 36.0f, CLR_TAB_INACT);
+  C2D_DrawRectSolid(0.0f, 35.0f, 0.0f, 320.0f, 1.0f, CLR_TAB_SEP);
+  draw_button(buf, &BTN_SET_BACK, "Back");
+  draw_text_centered_x(buf, "Display & Power", 8.0f, 0.7f, 320.0f);
+
+  /* Display control options */
+  draw_button(buf, &BTN_DISP_BOTH_OFF, "Turn Off Both Screens");
+  draw_button(buf, &BTN_DISP_BOT_OFF, "Turn Off Bottom Screen");
+
+  /* Helper hint text */
+  draw_text_centered_x(buf, "Wake: Tap screen or press D-Pad", 196.0f, 0.45f, 320.0f);
+  draw_text_centered_x(buf, "Shortcut: L + R turns off both screens", 212.0f, 0.45f, 320.0f);
 }
 
 void ui_draw_settings_edit_time(C2D_TextBuf buf, int h, int m, int s) {

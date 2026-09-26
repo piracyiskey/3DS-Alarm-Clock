@@ -18,6 +18,13 @@ typedef struct { float x, y, w, h; } HitRect;
 #define CLR_TAB_INACT   C2D_Color32(0x22, 0x22, 0x22, 0xFF)
 #define CLR_TAB_SEP     C2D_Color32(0x40, 0x40, 0x40, 0xFF)
 
+/* Display & Power Modes */
+typedef enum {
+    SCREEN_MODE_ALL_ON,
+    SCREEN_MODE_BOTTOM_OFF,
+    SCREEN_MODE_ALL_OFF
+} DisplayPowerMode;
+
 /* Modes (Tab bar items) */
 typedef enum {
     MODE_ALARM,
@@ -88,7 +95,12 @@ extern const HitRect BTN_SET_BACK;
 extern const HitRect BTN_SET_SAVE;
 extern const HitRect BTN_SET_EDIT;
 extern const HitRect BTN_SET_RESET;
+extern const HitRect BTN_SET_DISPLAY;
 extern const HitRect BTN_EDIT_DATE;
+
+/* --- Display & Power buttons --- */
+extern const HitRect BTN_DISP_BOTH_OFF;
+extern const HitRect BTN_DISP_BOT_OFF;
 
 /* --- Modal buttons --- */
 extern const HitRect BTN_OK;
@@ -139,6 +151,7 @@ void ui_draw_timer_ringing_bottom(C2D_TextBuf buf, int h, int m, int s);
 void ui_draw_settings_main(C2D_TextBuf buf);
 void ui_draw_settings_edit_time(C2D_TextBuf buf, int h, int m, int s);
 void ui_draw_settings_edit_date(C2D_TextBuf buf, int y, int m, int d, DateFormat fmt);
+void ui_draw_settings_display(C2D_TextBuf buf);
 void ui_draw_modal_confirm(C2D_TextBuf buf);
 void ui_draw_modal_success(C2D_TextBuf buf, const char* msg);
 

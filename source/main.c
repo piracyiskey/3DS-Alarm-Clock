@@ -1,4 +1,5 @@
 #include <3ds.h>
+#include <3ds/services/gsplcd.h>
 #include <citro3d.h>
 #include <citro2d.h>
 #include <string.h>
@@ -24,6 +25,39 @@ extern const u8 icons_t3x_end[];
 static u32* SOC_buffer = NULL;
 
 static void socShutdown(void) { socExit(); }
+
+/* --- Display & Power Management --- */
+static bool gsplcd_ok = false;
+static DisplayPowerMode s_screen_mode = SCREEN_MODE_ALL_ON;
+static u32 s_lr_debounce = 0;
+
+static void lcd_cleanup(void)
+{
+    if (gsplcd_ok) {
+        GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH);
+        gspLcdExit();
+        gsplcd_ok = false;
+    }
+}
+
+static void set_screen_mode(DisplayPowerMode new_mode)
+{
+    if (new_mode == s_screen_mode) return;
+
+    switch (new_mode) {
+    case SCREEN_MODE_ALL_ON:
+        GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH);
+        break;
+    case SCREEN_MODE_BOTTOM_OFF:
+        GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_TOP);
+        GSPLCD_PowerOffBacklight(GSPLCD_SCREEN_BOTTOM);
+        break;
+    case SCREEN_MODE_ALL_OFF:
+        GSPLCD_PowerOffBacklight(GSPLCD_SCREEN_BOTH);
+        break;
+    }
+    s_screen_mode = new_mode;
+}
 
 /* --- Telemetry Services (PTMU / MCUHWC) --- */
 static bool ptmu_ok = false;
@@ -89,8 +123,10 @@ static aptHookCookie apt_cookie;
 static void apt_hook_callback(APT_HookType hook, void* param) {
     (void)param;
     if (hook == APTHOOK_ONRESTORE || hook == APTHOOK_ONWAKEUP) {
-        /* Console just woke from sleep. The main loop resumes and
-           alarm_tick() detects forward time jump via delta > 120. */
+        /* Console just woke from sleep. Restore backlights if operating normally. */
+        if (gsplcd_ok && s_screen_mode == SCREEN_MODE_ALL_ON) {
+            GSPLCD_PowerOnBacklight(GSPLCD_SCREEN_BOTH);
+        }
     }
 }
 
@@ -100,7 +136,8 @@ typedef enum {
     SET_EDIT_TIME,
     SET_EDIT_DATE,
     SET_CONFIRM_RESET,
-    SET_SAVE_OK
+    SET_SAVE_OK,
+    SET_DISPLAY
 } SettingsSubState;
 
 #define TOUCH_SLOP_PX 8.0f
@@ -211,6 +248,11 @@ int main(int argc, char* argv[])
         link3dsStdio();
     }
 
+    gsplcd_ok = R_SUCCEEDED(gspLcdInit());
+    if (gsplcd_ok) {
+        atexit(lcd_cleanup);
+    }
+
     C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
     C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
     C2D_Prepare();
@@ -236,6 +278,9 @@ int main(int argc, char* argv[])
     atexit(telemetry_exit);
 
     /* --- Clock & Save init --- */
+    save_init();
+    atexit(save_exit);
+
     SaveData save;
     bool is_first_boot = false;
     int first_boot_frames = 0;
@@ -360,6 +405,41 @@ int main(int argc, char* argv[])
             }
         }
 
+        /* Display Power Management: Automatic Alarm & Timer Preemption */
+        if (alarm_sys.state == ALARM_STATE_RINGING || timer_ringing) {
+            if (s_screen_mode != SCREEN_MODE_ALL_ON) {
+                set_screen_mode(SCREEN_MODE_ALL_ON);
+            }
+        }
+
+        /* Display Power Management: Manual Wake Triggers (Touch or D-Pad) */
+        if (s_screen_mode != SCREEN_MODE_ALL_ON) {
+            if ((kDown & KEY_TOUCH) || (kDown & (KEY_DUP | KEY_DDOWN | KEY_DLEFT | KEY_DRIGHT))) {
+                set_screen_mode(SCREEN_MODE_ALL_ON);
+                /* Suppress wake event from activating covered UI controls */
+                tDown = false;
+                tHeld = false;
+                kDown &= ~(KEY_TOUCH | KEY_DUP | KEY_DDOWN | KEY_DLEFT | KEY_DRIGHT);
+            }
+        }
+
+        /* Display Power Management: Global Hardware Hotkey (L + R) */
+        if (s_lr_debounce > 0) {
+            s_lr_debounce--;
+        } else if ((kHeld & KEY_L) && (kHeld & KEY_R) && (kDown & (KEY_L | KEY_R))) {
+            set_screen_mode(SCREEN_MODE_ALL_OFF);
+            s_lr_debounce = 20; /* Debounce frames to prevent flickering */
+        }
+
+        /* Display Power Management: Night Standby Loop Throttling */
+        if (s_screen_mode == SCREEN_MODE_ALL_OFF) {
+            /* Night Standby Mode: Both backlights powered off.
+             * Completely bypass C3D/C2D render loop to eliminate CPU/GPU load.
+             * Sleep ~16.6ms to maintain 60 Hz tick for timers, alarms, and audio. */
+            svcSleepThread(16 * 1000 * 1000LL);
+            continue;
+        }
+
         /* ========================================================== */
         /*  Input Handling                                            */
         /* ========================================================== */
@@ -408,6 +488,19 @@ int main(int argc, char* argv[])
                     settings_sub = SET_EDIT_TIME;
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_RESET)) {
                     settings_sub = SET_CONFIRM_RESET;
+                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_DISPLAY)) {
+                    settings_sub = SET_DISPLAY;
+                }
+                break;
+
+            case SET_DISPLAY:
+                if ((kDown & KEY_B) ||
+                    (tDown && touch_hit(touch.px, touch.py, &BTN_SET_BACK))) {
+                    settings_sub = SET_MAIN;
+                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_DISP_BOTH_OFF)) {
+                    set_screen_mode(SCREEN_MODE_ALL_OFF);
+                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_DISP_BOT_OFF)) {
+                    set_screen_mode(SCREEN_MODE_BOTTOM_OFF);
                 }
                 break;
 
@@ -497,7 +590,6 @@ int main(int argc, char* argv[])
                 } else if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_CONFIRM))) {
                     if (edit_alarm_idx >= 0 && edit_alarm_idx < save.alarm_count) {
                         alarm_delete(&save, edit_alarm_idx);
-                        save_write(&save);
                         alarm_list_state.selected_index = -1;
                     }
                     show_delete_confirm = false;
@@ -531,8 +623,8 @@ int main(int argc, char* argv[])
                         } else {
                             save.alarms[edit_alarm_idx].last_fired_epoch = today_fire - 86400LL;
                         }
+                        save_write(&save);
                     }
-                    save_write(&save);
                     show_delete_confirm = false;
                     alarm_view = ALARM_VIEW_LIST;
                 } else if (!is_new && tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_EDIT_DELETE)) {
@@ -573,11 +665,11 @@ int main(int argc, char* argv[])
                 nav_handled  = true;
             }
             /* Global Tab Navigation via Shoulder Buttons (L / R) with Circular Wrapping */
-            else if (kDown & KEY_L) {
+            else if ((kDown & KEY_L) && !(kHeld & KEY_R)) {
                 active_mode = (AppMode)((active_mode + 3) % 4);
                 nav_handled = true;
             }
-            else if (kDown & KEY_R) {
+            else if ((kDown & KEY_R) && !(kHeld & KEY_L)) {
                 active_mode = (AppMode)((active_mode + 1) % 4);
                 nav_handled = true;
             }
@@ -815,85 +907,90 @@ int main(int argc, char* argv[])
         }
 
         /* --- Bottom Screen Rendering --- */
-        C2D_TargetClear(bot, CLR_BG);
-        C2D_SceneBegin(bot);
+        if (s_screen_mode != SCREEN_MODE_BOTTOM_OFF) {
+            C2D_TargetClear(bot, CLR_BG);
+            C2D_SceneBegin(bot);
 
-        if (alarm_sys.state == ALARM_STATE_RINGING) {
-            int first_ringing = __builtin_ctz(alarm_sys.ringing_mask);
-            ui_draw_alarm_ringing_bottom(textBuf, save.alarms[first_ringing].hour, save.alarms[first_ringing].minute, save.alarms[first_ringing].repeat_mode);
-        } else if (timer_ringing) {
-            ui_draw_timer_ringing_bottom(textBuf, tmr.target_h, tmr.target_m, tmr.target_s);
-        } else if (alarm_sys.missed_alarm) {
-            ui_draw_alarm_missed_modal(textBuf, alarm_sys.missed_count);
-        } else if (is_first_boot) {
-            ui_draw_first_boot(textBuf, first_boot_frames > 30);
-        } else if (is_settings) {
-            switch (settings_sub) {
-            case SET_MAIN:
-                ui_draw_settings_main(textBuf);
-                break;
-            case SET_EDIT_TIME:
-                ui_draw_settings_edit_time(textBuf, edit_h, edit_m, edit_s);
-                break;
-            case SET_EDIT_DATE:
-                ui_draw_settings_edit_date(textBuf, edit_y, edit_mo, edit_d, edit_fmt);
-                break;
-            case SET_CONFIRM_RESET:
-                ui_draw_settings_main(textBuf);
-                ui_draw_modal_confirm(textBuf);
-                break;
-            case SET_SAVE_OK:
-                ui_draw_settings_main(textBuf);
-                ui_draw_modal_success(textBuf, save_msg);
-                break;
+            if (alarm_sys.state == ALARM_STATE_RINGING) {
+                int first_ringing = __builtin_ctz(alarm_sys.ringing_mask);
+                ui_draw_alarm_ringing_bottom(textBuf, save.alarms[first_ringing].hour, save.alarms[first_ringing].minute, save.alarms[first_ringing].repeat_mode);
+            } else if (timer_ringing) {
+                ui_draw_timer_ringing_bottom(textBuf, tmr.target_h, tmr.target_m, tmr.target_s);
+            } else if (alarm_sys.missed_alarm) {
+                ui_draw_alarm_missed_modal(textBuf, alarm_sys.missed_count);
+            } else if (is_first_boot) {
+                ui_draw_first_boot(textBuf, first_boot_frames > 30);
+            } else if (is_settings) {
+                switch (settings_sub) {
+                case SET_MAIN:
+                    ui_draw_settings_main(textBuf);
+                    break;
+                case SET_EDIT_TIME:
+                    ui_draw_settings_edit_time(textBuf, edit_h, edit_m, edit_s);
+                    break;
+                case SET_EDIT_DATE:
+                    ui_draw_settings_edit_date(textBuf, edit_y, edit_mo, edit_d, edit_fmt);
+                    break;
+                case SET_CONFIRM_RESET:
+                    ui_draw_settings_main(textBuf);
+                    ui_draw_modal_confirm(textBuf);
+                    break;
+                case SET_SAVE_OK:
+                    ui_draw_settings_main(textBuf);
+                    ui_draw_modal_success(textBuf, save_msg);
+                    break;
+                case SET_DISPLAY:
+                    ui_draw_settings_display(textBuf);
+                    break;
+                }
+            } else if (alarm_view == STATE_ALARM_ADD || alarm_view == STATE_ALARM_EDIT) {
+                const char* rname = audio_get_ringtone_name(edit_alarm_tone);
+                bool is_new = (alarm_view == STATE_ALARM_ADD);
+                ui_draw_alarm_edit(textBuf, edit_alarm_h, edit_alarm_m, edit_alarm_repeat, edit_alarm_tone, is_new, rname);
+                if (show_delete_confirm) {
+                    ui_draw_alarm_delete_confirm(textBuf);
+                }
+            } else {
+                /* Draw global header bar for non-alarm tabs (alarm list draws its header over list to clip cards) */
+                if (active_mode != MODE_ALARM) {
+                    const char* title = "Clock";
+                    if (active_mode == MODE_STOPWATCH) title = "Stopwatch";
+                    else if (active_mode == MODE_TIMER) title = "Timer";
+                    ui_draw_header(textBuf, settings_icon, title);
+                }
+
+                /* Draw mode content */
+                switch (active_mode) {
+                case MODE_ALARM:
+                    ui_draw_alarm_list(textBuf, &save, &alarm_list_state, settings_icon);
+                    break;
+
+                case MODE_CLOCK:
+                    ui_draw_clock_bottom(textBuf);
+                    break;
+
+                case MODE_STOPWATCH:
+                    if (sw.state == SW_IDLE)
+                        ui_draw_stopwatch_idle(textBuf);
+                    else if (sw.state == SW_RUNNING)
+                        ui_draw_stopwatch_running(textBuf);
+                    else if (sw.state == SW_PAUSED)
+                        ui_draw_stopwatch_paused(textBuf);
+                    break;
+
+                case MODE_TIMER:
+                    if (tmr.state == TMR_ADJUST || tmr.state == TMR_EXPIRED)
+                        ui_draw_timer_adjust(textBuf, tmr.target_h, tmr.target_m, tmr.target_s);
+                    else if (tmr.state == TMR_RUNNING)
+                        ui_draw_timer_running(textBuf);
+                    else if (tmr.state == TMR_PAUSED)
+                        ui_draw_timer_paused(textBuf);
+                    break;
+                }
+
+                /* Draw persistent tab bar */
+                ui_draw_tab_bar(textBuf, active_mode);
             }
-        } else if (alarm_view == STATE_ALARM_ADD || alarm_view == STATE_ALARM_EDIT) {
-            const char* rname = audio_get_ringtone_name(edit_alarm_tone);
-            bool is_new = (alarm_view == STATE_ALARM_ADD);
-            ui_draw_alarm_edit(textBuf, edit_alarm_h, edit_alarm_m, edit_alarm_repeat, edit_alarm_tone, is_new, rname);
-            if (show_delete_confirm) {
-                ui_draw_alarm_delete_confirm(textBuf);
-            }
-        } else {
-            /* Draw global header bar for non-alarm tabs (alarm list draws its header over list to clip cards) */
-            if (active_mode != MODE_ALARM) {
-                const char* title = "Clock";
-                if (active_mode == MODE_STOPWATCH) title = "Stopwatch";
-                else if (active_mode == MODE_TIMER) title = "Timer";
-                ui_draw_header(textBuf, settings_icon, title);
-            }
-
-            /* Draw mode content */
-            switch (active_mode) {
-            case MODE_ALARM:
-                ui_draw_alarm_list(textBuf, &save, &alarm_list_state, settings_icon);
-                break;
-
-            case MODE_CLOCK:
-                ui_draw_clock_bottom(textBuf);
-                break;
-
-            case MODE_STOPWATCH:
-                if (sw.state == SW_IDLE)
-                    ui_draw_stopwatch_idle(textBuf);
-                else if (sw.state == SW_RUNNING)
-                    ui_draw_stopwatch_running(textBuf);
-                else if (sw.state == SW_PAUSED)
-                    ui_draw_stopwatch_paused(textBuf);
-                break;
-
-            case MODE_TIMER:
-                if (tmr.state == TMR_ADJUST || tmr.state == TMR_EXPIRED)
-                    ui_draw_timer_adjust(textBuf, tmr.target_h, tmr.target_m, tmr.target_s);
-                else if (tmr.state == TMR_RUNNING)
-                    ui_draw_timer_running(textBuf);
-                else if (tmr.state == TMR_PAUSED)
-                    ui_draw_timer_paused(textBuf);
-                break;
-            }
-
-            /* Draw persistent tab bar */
-            ui_draw_tab_bar(textBuf, active_mode);
         }
 
         C3D_FrameEnd(0);

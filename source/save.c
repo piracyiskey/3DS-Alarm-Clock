@@ -1,4 +1,5 @@
 #include "save.h"
+#include <3ds.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -24,11 +25,95 @@ typedef struct {
     u8        reserved[23];
 } SaveDataV2;
 
+#define SAVE_STACK_SIZE (4 * 1024)
+static Thread        s_save_thread = NULL;
+static LightEvent    s_save_event;
+static LightLock     s_save_lock;
+static SaveData      s_pending_save;
+static volatile bool s_save_pending = false;
+static volatile bool s_save_quit = false;
+
+static bool save_write_to_disk(const SaveData* data)
+{
+    /* Open existing file for in-place overwrite to avoid FAT table re-allocations */
+    FILE* f = fopen(SAVE_PATH, "r+b");
+    if (!f) {
+        /* File does not exist yet; create with "wb" */
+        f = fopen(SAVE_PATH, "wb");
+    }
+    if (!f) return false;
+
+    size_t n = fwrite(data, 1, sizeof(*data), f);
+    fflush(f);
+    fclose(f);
+    return n == sizeof(*data);
+}
+
+static void save_thread_entry(void* arg)
+{
+    (void)arg;
+    while (!s_save_quit) {
+        LightEvent_Wait(&s_save_event);
+        if (s_save_quit && !s_save_pending) break;
+
+        SaveData to_write;
+        bool has_work = false;
+
+        LightLock_Lock(&s_save_lock);
+        if (s_save_pending) {
+            to_write = s_pending_save;
+            s_save_pending = false;
+            has_work = true;
+        }
+        LightLock_Unlock(&s_save_lock);
+
+        if (has_work) {
+            save_write_to_disk(&to_write);
+        }
+    }
+}
+
 void save_ensure_dir(void)
 {
     mkdir("sdmc:/3ds", 0777);
     mkdir(SAVE_DIR, 0777);
     mkdir(SAVE_DIR "/ringtones", 0777);
+}
+
+void save_init(void)
+{
+    if (s_save_thread) return;
+
+    save_ensure_dir();
+
+    LightEvent_Init(&s_save_event, RESET_ONESHOT);
+    LightLock_Init(&s_save_lock);
+    s_save_pending = false;
+    s_save_quit = false;
+
+    /* Priority 0x31 (lower than audio at 0x18 and main thread at 0x30) */
+    s_save_thread = threadCreate(save_thread_entry, NULL, SAVE_STACK_SIZE, 0x31, -2, false);
+}
+
+void save_flush(void)
+{
+    if (!s_save_thread) return;
+
+    while (s_save_pending) {
+        svcSleepThread(2 * 1000 * 1000LL); /* 2ms */
+    }
+    svcSleepThread(5 * 1000 * 1000LL);     /* 5ms settling */
+}
+
+void save_exit(void)
+{
+    if (s_save_thread) {
+        s_save_quit = true;
+        LightEvent_Signal(&s_save_event);
+        threadJoin(s_save_thread, U64_MAX);
+        threadFree(s_save_thread);
+        s_save_thread = NULL;
+    }
 }
 
 void save_init_default(SaveData* data)
@@ -55,6 +140,10 @@ bool save_exists(void)
 
 bool save_read(SaveData* out)
 {
+    if (s_save_pending) {
+        save_flush();
+    }
+
     FILE* f = fopen(SAVE_PATH, "rb");
     if (!f) return false;
 
@@ -118,13 +207,20 @@ bool save_read(SaveData* out)
 
 bool save_write(const SaveData* data)
 {
-    save_ensure_dir();
-    FILE* f = fopen(SAVE_PATH, "wb");
-    if (!f) return false;
+    if (!data) return false;
 
-    size_t n = fwrite(data, 1, sizeof(*data), f);
-    fclose(f);
-    return n == sizeof(*data);
+    if (s_save_thread) {
+        LightLock_Lock(&s_save_lock);
+        s_pending_save = *data;
+        s_save_pending = true;
+        LightLock_Unlock(&s_save_lock);
+
+        LightEvent_Signal(&s_save_event);
+        return true;
+    }
+
+    /* Synchronous fallback if thread not yet running */
+    return save_write_to_disk(data);
 }
 
 void save_reset(SaveData* data)
