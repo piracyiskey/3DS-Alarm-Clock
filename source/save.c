@@ -1,8 +1,11 @@
 #include "save.h"
+#include "world_clock.h"
 #include <3ds.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+
+_Static_assert(sizeof(SaveData) == 1360, "SaveData must be exactly 1360 bytes");
 
 #define SAVE_DIR  "sdmc:/3ds/3ds-clock"
 #define SAVE_PATH SAVE_DIR "/save.dat"
@@ -24,6 +27,33 @@ typedef struct {
     u8        date_format;
     u8        reserved[23];
 } SaveDataV2;
+
+typedef struct {
+    u8   id;
+    bool enabled;
+    u8   hour;
+    u8   minute;
+    u8   repeat_mode;
+    u8   ringtone_id;
+    u8   _pad[2];
+    u64  last_fired_epoch;
+} AlarmEntryV3;
+
+typedef struct {
+    u32          magic;
+    u32          version;
+    s32          time_offset_s;
+    s32          date_offset_days;
+    u8           date_format;
+    u8           alarm_count;
+    u8           home_city_id;
+    u8           world_city_count;
+    u8           reserved_header[4];
+    AlarmEntryV3 alarms[16];
+    u8           world_cities[16];
+} SaveDataV3;
+
+_Static_assert(sizeof(SaveDataV3) == 296, "SaveDataV3 must be exactly 296 bytes");
 
 #define SAVE_STACK_SIZE (4 * 1024)
 static Thread        s_save_thread = NULL;
@@ -127,7 +157,13 @@ void save_init_default(SaveData* data)
     data->alarm_count      = 0;
     for (int i = 0; i < MAX_ALARMS; i++) {
         data->alarms[i].id = ALARM_INVALID;
+        data->alarms[i].label[0] = '\0';
     }
+    data->home_city_id     = 46; /* London */
+    data->world_city_count = 3;
+    data->world_cities[0]  = 78; /* Tokyo */
+    data->world_cities[1]  = 46; /* London */
+    data->world_cities[2]  = 58; /* New York */
 }
 
 bool save_exists(void)
@@ -157,7 +193,64 @@ bool save_read(SaveData* out)
         rewind(f);
         size_t n = fread(out, 1, sizeof(*out), f);
         fclose(f);
-        return n == sizeof(*out);
+        if (n != sizeof(*out)) return false;
+
+        /* Validate / sanitize world clock fields for upgraded v3 saves */
+        if (out->home_city_id >= world_clock_get_total_cities()) {
+            out->home_city_id = 46; /* London */
+        }
+        if (out->world_city_count == 0 || out->world_city_count > MAX_WORLD_CITIES) {
+            out->world_city_count = 3;
+            out->world_cities[0] = 78; /* Tokyo */
+            out->world_cities[1] = 46; /* London */
+        } else {
+            for (int i = 0; i < out->world_city_count; i++) {
+                if (out->world_cities[i] >= world_clock_get_total_cities()) {
+                    out->world_cities[i] = 0;
+                }
+            }
+        }
+        /* Sanitize alarm labels (ensure null termination) */
+        for (int i = 0; i < MAX_ALARMS; i++) {
+            out->alarms[i].label[ALARM_LABEL_LEN - 1] = '\0';
+        }
+        return true;
+    }
+
+    /* Check for v3 save and auto-migrate to v4 */
+    if (header[0] == SAVE_MAGIC && header[1] == 3) {
+        rewind(f);
+        SaveDataV3 v3;
+        size_t n = fread(&v3, 1, sizeof(v3), f);
+        fclose(f);
+        if (n != sizeof(v3)) return false;
+
+        save_init_default(out);
+        out->time_offset_s    = v3.time_offset_s;
+        out->date_offset_days = v3.date_offset_days;
+        out->date_format      = v3.date_format;
+        out->alarm_count      = (v3.alarm_count <= 16) ? v3.alarm_count : 16;
+        out->home_city_id     = v3.home_city_id;
+        out->world_city_count = (v3.world_city_count <= 16) ? v3.world_city_count : 16;
+
+        for (int i = 0; i < 16; i++) {
+            out->alarms[i].id               = v3.alarms[i].id;
+            out->alarms[i].enabled          = v3.alarms[i].enabled;
+            out->alarms[i].hour             = v3.alarms[i].hour;
+            out->alarms[i].minute           = v3.alarms[i].minute;
+            out->alarms[i].repeat_mode      = v3.alarms[i].repeat_mode;
+            out->alarms[i].ringtone_id      = v3.alarms[i].ringtone_id;
+            out->alarms[i].last_fired_epoch = v3.alarms[i].last_fired_epoch;
+            out->alarms[i].label[0]         = '\0';
+        }
+
+        for (int i = 0; i < 16; i++) {
+            out->world_cities[i] = v3.world_cities[i];
+        }
+
+        /* Write upgraded v4 save file immediately */
+        save_write(out);
+        return true;
     }
 
     /* Check for v2 save and auto-migrate */

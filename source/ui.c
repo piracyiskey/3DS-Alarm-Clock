@@ -1,5 +1,8 @@
 #include "ui.h"
+#include "world_clock.h"
+#include "clock.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 /* ------------------------------------------------------------------ */
 /*  Stepper layout metrics (shared by time & date editors)             */
@@ -100,6 +103,7 @@ const HitRect BTN_ALARM_TONE_LEFT = {ALARM_SEL_BTN_LEFT_X, ALARM_SEL_TONE_Y,
                                      ALARM_SEL_BTN_W, ALARM_SEL_ROW_H};
 const HitRect BTN_ALARM_TONE_RIGHT = {ALARM_SEL_BTN_RIGHT_X, ALARM_SEL_TONE_Y,
                                       ALARM_SEL_BTN_W, ALARM_SEL_ROW_H};
+const HitRect BTN_ALARM_LABEL_INPUT = {96.0f, 196.0f, 188.0f, 26.0f};
 const HitRect BTN_ALARM_DISMISS = {60.0f, 140.0f, 200.0f, 40.0f};
 const HitRect BTN_ALARM_MISSED_OK = {60.0f, 140.0f, 200.0f, 40.0f};
 const HitRect BTN_TIMER_DISMISS = {60.0f, 140.0f, 200.0f, 40.0f};
@@ -127,6 +131,14 @@ const HitRect BTN_DISP_BOT_OFF  = {40.0f, 136.0f, 240.0f, 48.0f};
 const HitRect BTN_OK = {110.0f, 145.0f, 100.0f, 40.0f};
 const HitRect BTN_CANCEL = {40.0f, 145.0f, 100.0f, 40.0f};
 const HitRect BTN_CONFIRM = {180.0f, 145.0f, 100.0f, 40.0f};
+
+/* World Clock buttons */
+const HitRect BTN_CLOCK_ADD         = { 240.0f, 2.0f, 36.0f, 28.0f };
+const HitRect BTN_CITY_PICKER_BACK  = { 8.0f, 4.0f, 56.0f, 24.0f };
+const HitRect BTN_MODAL_CITY_CANCEL = { 35.0f, 140.0f, 115.0f, 36.0f };
+const HitRect BTN_MODAL_CITY_DEL    = { 170.0f, 140.0f, 115.0f, 36.0f };
+const HitRect BTN_MODAL_HOME_CANCEL = { 35.0f, 140.0f, 115.0f, 36.0f };
+const HitRect BTN_MODAL_HOME_SET    = { 170.0f, 140.0f, 115.0f, 36.0f };
 
 /* ------------------------------------------------------------------ */
 /*  Internal helpers                                                   */
@@ -407,6 +419,74 @@ void ui_draw_top_clock_with_date(C2D_TextBuf buf, int h, int m, int s,
   }
 }
 
+void ui_draw_top_clock_with_home(C2D_TextBuf buf, int h, int m, int s,
+                                 const char *date_str, const char *home_city,
+                                 const char *home_country) {
+  /* Telemetry header */
+  draw_text_centered_x(buf, "WORLD CLOCK", 34.0f, 0.55f, 400.0f);
+
+  /* Main digits at scale 2.0 */
+  char str[16];
+  snprintf(str, sizeof(str), "%02d:%02d:%02d", h, m, s);
+
+  C2D_Text text;
+  C2D_TextParse(&text, buf, str);
+  C2D_TextOptimize(&text);
+
+  float scale = 2.0f;
+  float tw, th;
+  C2D_TextGetDimensions(&text, scale, scale, &tw, &th);
+
+  float x = (400.0f - tw) / 2.0f;
+  float y = 70.0f;
+  C2D_DrawText(&text, C2D_WithColor, x, y, 0.0f, scale, scale, CLR_TEXT);
+
+  /* Date display string below clock */
+  if (date_str && date_str[0] != '\0') {
+    draw_text_centered_x(buf, date_str, 142.0f, 0.65f, 400.0f);
+  }
+
+  /* Home reference city */
+  if (home_city && home_country) {
+    char home_str[64];
+    snprintf(home_str, sizeof(home_str), "Home: %s, %s", home_city, home_country);
+    draw_text_centered_x(buf, home_str, 175.0f, 0.48f, 400.0f);
+  }
+}
+
+void ui_draw_top_clock_with_alarm_status(C2D_TextBuf buf, int h, int m, int s,
+                                         const char *date_str,
+                                         const char *alarm_status) {
+  /* Telemetry header */
+  draw_text_centered_x(buf, "ALARM", 34.0f, 0.55f, 400.0f);
+
+  /* Main digits at scale 2.0 */
+  char str[16];
+  snprintf(str, sizeof(str), "%02d:%02d:%02d", h, m, s);
+
+  C2D_Text text;
+  C2D_TextParse(&text, buf, str);
+  C2D_TextOptimize(&text);
+
+  float scale = 2.0f;
+  float tw, th;
+  C2D_TextGetDimensions(&text, scale, scale, &tw, &th);
+
+  float x = (400.0f - tw) / 2.0f;
+  float y = 70.0f;
+  C2D_DrawText(&text, C2D_WithColor, x, y, 0.0f, scale, scale, CLR_TEXT);
+
+  /* Date display string below clock */
+  if (date_str && date_str[0] != '\0') {
+    draw_text_centered_x(buf, date_str, 142.0f, 0.65f, 400.0f);
+  }
+
+  /* Next alarm status line */
+  if (alarm_status && alarm_status[0] != '\0') {
+    draw_text_centered_x(buf, alarm_status, 175.0f, 0.48f, 400.0f);
+  }
+}
+
 void ui_draw_top_stopwatch(C2D_TextBuf buf, int hh, int mm, int ss, int cs,
                            bool show_hours) {
   draw_text_centered_x(buf, "STOPWATCH", 40.0f, 0.55f, 400.0f);
@@ -518,7 +598,8 @@ void ui_draw_tab_bar(C2D_TextBuf buf, AppMode active) {
 void ui_draw_alarm_list(C2D_TextBuf buf, SaveData *save, AlarmListState *state,
                         C2D_Image settings_icon) {
   if (save->alarm_count == 0) {
-    draw_text_centered_x(buf, "No alarms set", 100.0f, 0.6f, 320.0f);
+    draw_text_centered_x(buf, "No alarms set", 95.0f, 0.65f, 320.0f);
+    draw_text_centered_x(buf, "Tap [+] above to add an alarm", 125.0f, 0.50f, 320.0f);
   } else {
     /* Enable hardware scissor for scroll viewport: X: 0, Y: 34, W: 320, H: 164
      * (clamping content between Y=34 and Y=198) */
@@ -549,7 +630,7 @@ void ui_draw_alarm_list(C2D_TextBuf buf, SaveData *save, AlarmListState *state,
       C2D_DrawText(&text, C2D_WithColor, 20.0f, y + 4.0f, 0.0f, 0.8f, 0.8f,
                    CLR_TEXT);
 
-      /* Repeat mode */
+      /* Repeat mode & Label subtext */
       const char *rep_str = "";
       switch (save->alarms[i].repeat_mode) {
       case REPEAT_ONCE:
@@ -565,9 +646,16 @@ void ui_draw_alarm_list(C2D_TextBuf buf, SaveData *save, AlarmListState *state,
         rep_str = "Weekends";
         break;
       }
-      C2D_TextParse(&text, buf, rep_str);
+
+      char sub_str[64];
+      if (save->alarms[i].label[0] != '\0') {
+        snprintf(sub_str, sizeof(sub_str), "%s • %s", save->alarms[i].label, rep_str);
+      } else {
+        snprintf(sub_str, sizeof(sub_str), "%s", rep_str);
+      }
+      C2D_TextParse(&text, buf, sub_str);
       C2D_TextOptimize(&text);
-      C2D_DrawText(&text, C2D_WithColor, 20.0f, y + 28.0f, 0.0f, 0.5f, 0.5f,
+      C2D_DrawText(&text, C2D_WithColor, 20.0f, y + 28.0f, 0.0f, 0.45f, 0.45f,
                    CLR_TEXT_DIM);
 
       /* Toggle switch / checkbox area (right side) */
@@ -582,6 +670,20 @@ void ui_draw_alarm_list(C2D_TextBuf buf, SaveData *save, AlarmListState *state,
         C2D_DrawRectSolid(box_x, box_y, 0.0f, box_size, box_size,
                           C2D_Color32(0x20, 0x20, 0x20, 0xFF));
       }
+
+      /* Delete [✕] touch button (left of toggle switch) */
+      float del_w = 24.0f;
+      float del_h = 24.0f;
+      float del_x = box_x - 8.0f - del_w;
+      float del_y = y + (card_h - del_h) / 2.0f;
+      C2D_DrawRectSolid(del_x, del_y, 0.0f, del_w, del_h, C2D_Color32(0x8A, 0x24, 0x24, 0xFF));
+
+      C2D_Text txt_del;
+      C2D_TextParse(&txt_del, buf, "X");
+      C2D_TextOptimize(&txt_del);
+      float tw_del, th_del;
+      C2D_TextGetDimensions(&txt_del, 0.50f, 0.50f, &tw_del, &th_del);
+      C2D_DrawText(&txt_del, C2D_WithColor, del_x + (del_w - tw_del) / 2.0f, del_y + (del_h - th_del) / 2.0f, 0.0f, 0.50f, 0.50f, CLR_TEXT);
     }
 
     /* Disable hardware scissor immediately so header, tab bar, and buttons are
@@ -598,7 +700,8 @@ void ui_draw_alarm_list(C2D_TextBuf buf, SaveData *save, AlarmListState *state,
 
 void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
                         u8 ringtone_id, bool is_new,
-                        const char *ringtone_name) {
+                        const char *ringtone_name,
+                        const char *label) {
   /* 1. Header (Nav bar) */
   C2D_DrawRectSolid(0.0f, 0.0f, 0.0f, 320.0f, 36.0f, CLR_TAB_INACT);
   C2D_DrawRectSolid(0.0f, 35.0f, 0.0f, 320.0f, 1.0f, CLR_TAB_SEP);
@@ -722,11 +825,36 @@ void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
                ALARM_SEL_REPEAT_Y + (ALARM_SEL_ROW_H - th_rm) / 2.0f, 0.0f,
                0.50f, 0.50f, CLR_TEXT);
 
-  /* 5. Delete Alarm Button (Option A) */
-  if (!is_new) {
-    draw_button_scaled(buf, &BTN_ALARM_EDIT_DELETE, "Delete Alarm", 0.55f,
-                       C2D_Color32(0x8A, 0x24, 0x24, 0xFF));
-  }
+  /* 5. Label Input Row — [Label:] [ Text Box ] */
+  C2D_Text txt_lbl;
+  C2D_TextParse(&txt_lbl, buf, "Label:");
+  C2D_TextOptimize(&txt_lbl);
+  float tw_lbl, th_lbl;
+  C2D_TextGetDimensions(&txt_lbl, 0.55f, 0.55f, &tw_lbl, &th_lbl);
+  float y_lbl = BTN_ALARM_LABEL_INPUT.y + (BTN_ALARM_LABEL_INPUT.h - th_lbl) / 2.0f;
+  C2D_DrawText(&txt_lbl, C2D_WithColor, ALARM_SEL_LABEL_R - tw_lbl, y_lbl,
+               0.0f, 0.55f, 0.55f, CLR_TEXT);
+
+  /* Input box */
+  C2D_DrawRectSolid(BTN_ALARM_LABEL_INPUT.x, BTN_ALARM_LABEL_INPUT.y, 0.0f,
+                    BTN_ALARM_LABEL_INPUT.w, BTN_ALARM_LABEL_INPUT.h,
+                    C2D_Color32(0x22, 0x26, 0x30, 0xFF));
+  /* Subtle border */
+  C2D_DrawRectSolid(BTN_ALARM_LABEL_INPUT.x, BTN_ALARM_LABEL_INPUT.y, 0.0f, BTN_ALARM_LABEL_INPUT.w, 1.0f, C2D_Color32(0x40, 0x48, 0x58, 0xFF));
+  C2D_DrawRectSolid(BTN_ALARM_LABEL_INPUT.x, BTN_ALARM_LABEL_INPUT.y + BTN_ALARM_LABEL_INPUT.h - 1.0f, 0.0f, BTN_ALARM_LABEL_INPUT.w, 1.0f, C2D_Color32(0x40, 0x48, 0x58, 0xFF));
+  C2D_DrawRectSolid(BTN_ALARM_LABEL_INPUT.x, BTN_ALARM_LABEL_INPUT.y, 0.0f, 1.0f, BTN_ALARM_LABEL_INPUT.h, C2D_Color32(0x40, 0x48, 0x58, 0xFF));
+  C2D_DrawRectSolid(BTN_ALARM_LABEL_INPUT.x + BTN_ALARM_LABEL_INPUT.w - 1.0f, BTN_ALARM_LABEL_INPUT.y, 0.0f, 1.0f, BTN_ALARM_LABEL_INPUT.h, C2D_Color32(0x40, 0x48, 0x58, 0xFF));
+
+  const char *disp_lbl = (label && label[0] != '\0') ? label : "Tap to add label...";
+  u32 lbl_clr = (label && label[0] != '\0') ? CLR_TEXT : CLR_TEXT_DIM;
+  C2D_Text txt_val;
+  C2D_TextParse(&txt_val, buf, disp_lbl);
+  C2D_TextOptimize(&txt_val);
+  float tw_val, th_val;
+  C2D_TextGetDimensions(&txt_val, 0.48f, 0.48f, &tw_val, &th_val);
+  C2D_DrawText(&txt_val, C2D_WithColor, BTN_ALARM_LABEL_INPUT.x + 8.0f,
+               BTN_ALARM_LABEL_INPUT.y + (BTN_ALARM_LABEL_INPUT.h - th_val) / 2.0f,
+               0.0f, 0.48f, 0.48f, lbl_clr);
 }
 
 void ui_draw_alarm_delete_confirm(C2D_TextBuf buf) {
@@ -738,7 +866,7 @@ void ui_draw_alarm_delete_confirm(C2D_TextBuf buf) {
 }
 
 void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
-                               u32 frame_counter) {
+                               const char *label, u32 frame_counter) {
   C2D_DrawRectSolid(0, 0, 0, 400, 240, C2D_Color32(0x20, 0x00, 0x00, 0xFF));
 
   float scale = 2.0f + 0.1f * sinf(frame_counter * 0.05f);
@@ -772,11 +900,12 @@ void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
     rep_str = "Weekends";
     break;
   }
-  draw_text_centered_x(buf, rep_str, 175.0f, 0.7f, 400.0f);
+  const char *status_str = (label && label[0] != '\0') ? label : rep_str;
+  draw_text_centered_x(buf, status_str, 175.0f, 0.7f, 400.0f);
 }
 
 void ui_draw_alarm_ringing_bottom(C2D_TextBuf buf, int h, int m,
-                                  u8 repeat_mode) {
+                                  u8 repeat_mode, const char *label) {
   C2D_DrawRectSolid(0, 0, 0, 320, 240, CLR_OVERLAY);
   C2D_DrawRectSolid(20, 20, 0, 280, 200, CLR_MODAL_BG);
 
@@ -801,7 +930,8 @@ void ui_draw_alarm_ringing_bottom(C2D_TextBuf buf, int h, int m,
     rep_str = "Weekends";
     break;
   }
-  draw_text_centered_x(buf, rep_str, 105.0f, 0.6f, 320.0f);
+  const char *status_str = (label && label[0] != '\0') ? label : rep_str;
+  draw_text_centered_x(buf, status_str, 105.0f, 0.6f, 320.0f);
 
   draw_button_scaled(buf, &BTN_ALARM_DISMISS, "DISMISS", 0.70f,
                      C2D_Color32(0x8A, 0x24, 0x24, 0xFF));
@@ -826,9 +956,236 @@ void ui_draw_alarm_missed_modal(C2D_TextBuf buf, int missed_count) {
 }
 
 void ui_draw_clock_bottom(C2D_TextBuf buf) {
-  draw_text_centered_x(buf, "3DS Clock", 85.0f, 0.75f, 320.0f);
-  draw_text_centered_x(buf, "Select a tab below to switch modes", 115.0f, 0.5f,
-                       320.0f);
+  draw_text_centered_x(buf, "World Clock", 85.0f, 0.75f, 320.0f);
+}
+
+void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListState* state, C2D_Image settings_icon) {
+  if (save->world_city_count == 0) {
+    draw_text_centered_x(buf, "No world cities added", 95.0f, 0.65f, 320.0f);
+    draw_text_centered_x(buf, "Tap [+] above to add a city", 125.0f, 0.50f, 320.0f);
+  } else {
+    /* Scissor viewport: X: 0, Y: 34, W: 320, H: 164 (clamping content between Y=34 and Y=198) */
+    ui_set_scissor(GPU_SCISSOR_NORMAL, 0, 34, 320, 164);
+
+    float start_y = 36.0f - state->scroll_y;
+    float card_h = 46.0f;
+    float gap = 4.0f;
+
+    int cur_h, cur_m, cur_s;
+    int cur_y, cur_mo, cur_d;
+    clock_get_hms(&cur_h, &cur_m, &cur_s);
+    clock_get_ymd(&cur_y, &cur_mo, &cur_d);
+
+    for (int i = 0; i < save->world_city_count; i++) {
+      float y = start_y + i * (card_h + gap);
+      if (y > 200.0f || y + card_h < 34.0f)
+        continue;
+
+      u8 city_id = save->world_cities[i];
+      const CityTimezone* tz = world_clock_get_city_info(city_id);
+
+      u32 card_bg = (i == state->selected_index)
+                        ? C2D_Color32(0x48, 0x58, 0x6E, 0xFF)
+                        : CLR_BTN;
+      C2D_DrawRectSolid(10.0f, y, 0.0f, 300.0f, card_h, card_bg);
+
+      /* Compute local time for target city */
+      int th = 0, tm = 0, ts = 0, day_off = 0, diff_h = 0, diff_m = 0;
+      world_clock_calculate_time(city_id, save->home_city_id,
+                                 cur_h, cur_m, cur_s,
+                                 cur_y, cur_mo, cur_d,
+                                 &th, &tm, &ts,
+                                 &day_off, &diff_h, &diff_m);
+
+      /* Left: City name */
+      C2D_Text txt;
+      C2D_TextParse(&txt, buf, tz->city);
+      C2D_TextOptimize(&txt);
+      C2D_DrawText(&txt, C2D_WithColor, 20.0f, y + 5.0f, 0.0f, 0.65f, 0.65f, CLR_TEXT);
+
+      /* Left Subtext: Country & relative offset badge */
+      char badge[64];
+      if (city_id == save->home_city_id) {
+        snprintf(badge, sizeof(badge), "Home City • %s", tz->country);
+      } else {
+        const char* day_name = (day_off == 0) ? "Today" : ((day_off > 0) ? "Tomorrow" : "Yesterday");
+        if (diff_m != 0) {
+          snprintf(badge, sizeof(badge), "%s, %+d:%02d hrs • %s", day_name, diff_h, abs(diff_m), tz->country);
+        } else {
+          snprintf(badge, sizeof(badge), "%s, %+d hrs • %s", day_name, diff_h, tz->country);
+        }
+      }
+      C2D_TextParse(&txt, buf, badge);
+      C2D_TextOptimize(&txt);
+      C2D_DrawText(&txt, C2D_WithColor, 20.0f, y + 27.0f, 0.0f, 0.45f, 0.45f, CLR_TEXT_DIM);
+
+      /* Right side: Delete [✕] touch button */
+      float del_w = 26.0f;
+      float del_h = 26.0f;
+      float del_x = 300.0f - 10.0f - del_w;
+      float del_y = y + (card_h - del_h) / 2.0f;
+      C2D_DrawRectSolid(del_x, del_y, 0.0f, del_w, del_h, C2D_Color32(0x8A, 0x24, 0x24, 0xFF));
+
+      C2D_TextParse(&txt, buf, "X");
+      C2D_TextOptimize(&txt);
+      float tw_x, th_x;
+      C2D_TextGetDimensions(&txt, 0.55f, 0.55f, &tw_x, &th_x);
+      C2D_DrawText(&txt, C2D_WithColor, del_x + (del_w - tw_x) / 2.0f, del_y + (del_h - th_x) / 2.0f, 0.0f, 0.55f, 0.55f, CLR_TEXT);
+
+      /* Right side: Time string (e.g. "18:25") */
+      char time_str[16];
+      snprintf(time_str, sizeof(time_str), "%02d:%02d", th, tm);
+      C2D_TextParse(&txt, buf, time_str);
+      C2D_TextOptimize(&txt);
+      float tw_time, th_time;
+      C2D_TextGetDimensions(&txt, 0.80f, 0.80f, &tw_time, &th_time);
+      float time_x = del_x - 12.0f - tw_time;
+      C2D_DrawText(&txt, C2D_WithColor, time_x, y + 6.0f, 0.0f, 0.80f, 0.80f, CLR_TEXT);
+
+      /* Day/Night indicator */
+      bool is_day = world_clock_is_daytime(th);
+      const char* dn_str = is_day ? "DAY" : "NIGHT";
+      u32 dn_clr = is_day ? C2D_Color32(0xFF, 0xDA, 0x44, 0xFF) : C2D_Color32(0x80, 0xA0, 0xD0, 0xFF);
+      C2D_TextParse(&txt, buf, dn_str);
+      C2D_TextOptimize(&txt);
+      float tw_dn, th_dn;
+      C2D_TextGetDimensions(&txt, 0.40f, 0.40f, &tw_dn, &th_dn);
+      C2D_DrawText(&txt, C2D_WithColor, del_x - 12.0f - tw_dn, y + 28.0f, 0.0f, 0.40f, 0.40f, dn_clr);
+    }
+
+    ui_set_scissor(GPU_SCISSOR_DISABLE, 0, 0, 0, 0);
+  }
+
+  /* Draw header over the scrolling content */
+  ui_draw_header(buf, settings_icon, "World Clock");
+
+  /* Draw Add Button (+) on top of header */
+  draw_button_scaled(buf, &BTN_CLOCK_ADD, "+", 0.70f, CLR_BTN);
+}
+
+void ui_draw_city_picker(C2D_TextBuf buf, const SaveData* save, CityPickerState* state) {
+  int total_cities = world_clock_get_total_cities();
+
+  /* Scissor for scroll viewport: Y: 34 to 238 */
+  ui_set_scissor(GPU_SCISSOR_NORMAL, 0, 34, 320, 204);
+
+  float start_y = 36.0f - state->scroll_y;
+  float item_h = 34.0f;
+  float gap = 2.0f;
+
+  for (int i = 0; i < total_cities; i++) {
+    float y = start_y + i * (item_h + gap);
+    if (y > 240.0f || y + item_h < 34.0f)
+      continue;
+
+    const CityTimezone* tz = world_clock_get_city_info((u8)i);
+    bool already_added = world_clock_has_city(save, (u8)i);
+
+    u32 bg_clr;
+    if (already_added) {
+      bg_clr = C2D_Color32(0x38, 0x38, 0x38, 0xFF);
+    } else if (i == state->selected_index) {
+      bg_clr = C2D_Color32(0x48, 0x58, 0x6E, 0xFF);
+    } else {
+      bg_clr = CLR_BTN;
+    }
+
+    C2D_DrawRectSolid(10.0f, y, 0.0f, 296.0f, item_h, bg_clr);
+
+    /* Left: City Name */
+    C2D_Text txt;
+    C2D_TextParse(&txt, buf, tz->city);
+    C2D_TextOptimize(&txt);
+    C2D_DrawText(&txt, C2D_WithColor, 18.0f, y + 4.0f, 0.0f, 0.58f, 0.58f,
+                 already_added ? CLR_TEXT_DIM : CLR_TEXT);
+
+    /* Left subtext: Country */
+    C2D_TextParse(&txt, buf, tz->country);
+    C2D_TextOptimize(&txt);
+    C2D_DrawText(&txt, C2D_WithColor, 18.0f, y + 19.0f, 0.0f, 0.40f, 0.40f, CLR_TEXT_DIM);
+
+    /* Right text: UTC standard offset or [Added] */
+    if (already_added) {
+      C2D_TextParse(&txt, buf, "[Added]");
+      C2D_TextOptimize(&txt);
+      C2D_DrawText(&txt, C2D_WithColor, 250.0f, y + 9.0f, 0.0f, 0.48f, 0.48f, CLR_TEXT_DIM);
+    } else {
+      char utc_str[16];
+      if (tz->utc_offset_m != 0) {
+        snprintf(utc_str, sizeof(utc_str), "UTC%+d:%02d", tz->utc_offset_h, tz->utc_offset_m);
+      } else {
+        snprintf(utc_str, sizeof(utc_str), "UTC%+d", tz->utc_offset_h);
+      }
+      C2D_TextParse(&txt, buf, utc_str);
+      C2D_TextOptimize(&txt);
+      float tw_utc, th_utc;
+      C2D_TextGetDimensions(&txt, 0.48f, 0.48f, &tw_utc, &th_utc);
+      C2D_DrawText(&txt, C2D_WithColor, 298.0f - tw_utc, y + 9.0f, 0.0f, 0.48f, 0.48f, CLR_TEXT_DIM);
+    }
+  }
+
+  /* Scrollbar indicator on the right edge */
+  float total_h = total_cities * (item_h + gap);
+  float view_h = 204.0f;
+  if (total_h > view_h) {
+    float max_scroll = total_h - view_h;
+    float track_h = 196.0f;
+    float thumb_h = (view_h / total_h) * track_h;
+    if (thumb_h < 16.0f) thumb_h = 16.0f;
+    float thumb_y = 38.0f + (state->scroll_y / max_scroll) * (track_h - thumb_h);
+    C2D_DrawRectSolid(312.0f, 38.0f, 0.0f, 3.0f, track_h, C2D_Color32(0x28, 0x28, 0x28, 0xFF));
+    C2D_DrawRectSolid(312.0f, thumb_y, 0.0f, 3.0f, thumb_h, C2D_Color32(0x80, 0x80, 0x80, 0xFF));
+  }
+
+  ui_set_scissor(GPU_SCISSOR_DISABLE, 0, 0, 0, 0);
+
+  /* Draw header bar over the scrolling content */
+  C2D_DrawRectSolid(0.0f, 0.0f, 0.0f, 320.0f, 34.0f, CLR_TAB_INACT);
+  C2D_DrawRectSolid(0.0f, 33.0f, 0.0f, 320.0f, 1.0f, CLR_TAB_SEP);
+
+  draw_button_scaled(buf, &BTN_CITY_PICKER_BACK, "Back", 0.55f, CLR_BTN);
+  draw_text_centered_x(buf, "Add City", 8.0f, 0.65f, 320.0f);
+
+  char count_str[16];
+  snprintf(count_str, sizeof(count_str), "%d/%d", save->world_city_count, MAX_WORLD_CITIES);
+  C2D_Text txt;
+  C2D_TextParse(&txt, buf, count_str);
+  C2D_TextOptimize(&txt);
+  float tw_c, th_c;
+  C2D_TextGetDimensions(&txt, 0.48f, 0.48f, &tw_c, &th_c);
+  C2D_DrawText(&txt, C2D_WithColor, 310.0f - tw_c, 10.0f, 0.0f, 0.48f, 0.48f, CLR_TEXT_DIM);
+}
+
+void ui_draw_world_clock_delete_confirm(C2D_TextBuf buf, u8 city_id) {
+  draw_modal_bg();
+
+  const CityTimezone* tz = world_clock_get_city_info(city_id);
+
+  draw_text_centered_x(buf, "Remove City", 58.0f, 0.70f, 320.0f);
+
+  char line1[64];
+  snprintf(line1, sizeof(line1), "Remove %s", tz->city);
+  draw_text_centered_x(buf, line1, 86.0f, 0.58f, 320.0f);
+  draw_text_centered_x(buf, "from World Clock?", 108.0f, 0.50f, 320.0f);
+
+  draw_button_scaled(buf, &BTN_MODAL_CITY_CANCEL, "Cancel", 0.55f, CLR_BTN);
+  draw_button_scaled(buf, &BTN_MODAL_CITY_DEL, "Remove", 0.55f, C2D_Color32(0x8A, 0x24, 0x24, 0xFF));
+}
+
+void ui_draw_world_clock_set_home_confirm(C2D_TextBuf buf, u8 city_id) {
+  draw_modal_bg();
+
+  const CityTimezone* tz = world_clock_get_city_info(city_id);
+
+  draw_text_centered_x(buf, "Set Home City", 58.0f, 0.70f, 320.0f);
+
+  char line1[64];
+  snprintf(line1, sizeof(line1), "Set %s as your", tz->city);
+  draw_text_centered_x(buf, line1, 86.0f, 0.55f, 320.0f);
+  draw_text_centered_x(buf, "Home reference city?", 108.0f, 0.50f, 320.0f);
+
+  draw_button_scaled(buf, &BTN_MODAL_HOME_CANCEL, "Cancel", 0.55f, CLR_BTN);
+  draw_button_scaled(buf, &BTN_MODAL_HOME_SET, "Set Home", 0.55f, C2D_Color32(0x35, 0x7A, 0x38, 0xFF));
 }
 
 void ui_draw_stopwatch_idle(C2D_TextBuf buf) {

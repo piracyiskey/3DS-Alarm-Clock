@@ -82,6 +82,7 @@ extern const HitRect BTN_ALARM_REPEAT_LEFT;
 extern const HitRect BTN_ALARM_REPEAT_RIGHT;
 extern const HitRect BTN_ALARM_TONE_LEFT;
 extern const HitRect BTN_ALARM_TONE_RIGHT;
+extern const HitRect BTN_ALARM_LABEL_INPUT;
 extern const HitRect BTN_ALARM_DISMISS;
 extern const HitRect BTN_ALARM_MISSED_OK;
 extern const HitRect BTN_TIMER_DISMISS;
@@ -107,11 +108,21 @@ extern const HitRect BTN_OK;
 extern const HitRect BTN_CANCEL;
 extern const HitRect BTN_CONFIRM;
 
+/* --- World Clock buttons --- */
+extern const HitRect BTN_CLOCK_ADD;
+extern const HitRect BTN_CITY_PICKER_BACK;
+extern const HitRect BTN_MODAL_CITY_CANCEL;
+extern const HitRect BTN_MODAL_CITY_DEL;
+extern const HitRect BTN_MODAL_HOME_CANCEL;
+extern const HitRect BTN_MODAL_HOME_SET;
+
 /* --- Drawing functions --- */
 
 /* Top screen */
 void ui_draw_top_status_bar(C2D_TextBuf buf, u8 wifi_bars, u8 battery_percent, bool is_charging);
 void ui_draw_top_clock_with_date(C2D_TextBuf buf, int h, int m, int s, const char* date_str);
+void ui_draw_top_clock_with_home(C2D_TextBuf buf, int h, int m, int s, const char* date_str, const char* home_city, const char* home_country);
+void ui_draw_top_clock_with_alarm_status(C2D_TextBuf buf, int h, int m, int s, const char* date_str, const char* alarm_status);
 void ui_draw_top_stopwatch(C2D_TextBuf buf, int hh, int mm, int ss, int cs, bool show_hours);
 void ui_draw_top_timer(C2D_TextBuf buf, int hh, int mm, int ss);
 
@@ -128,16 +139,49 @@ typedef struct {
     bool  potential_tap;
     int   candidate_index;
     bool  candidate_is_toggle;
+    bool  candidate_is_delete;
     int   selected_index;
 } AlarmListState;
 
+typedef enum {
+    CLOCK_VIEW_LIST,
+    CLOCK_VIEW_PICKER
+} ClockView;
+
+typedef struct {
+    float scroll_y;
+    float touch_start_y;
+    float touch_start_x;
+    bool  is_dragging;
+    bool  potential_tap;
+    int   candidate_index;
+    bool  candidate_is_delete;
+    int   selected_index;
+} WorldClockListState;
+
+typedef struct {
+    float scroll_y;
+    float touch_start_y;
+    float touch_start_x;
+    bool  is_dragging;
+    bool  potential_tap;
+    int   candidate_index;
+    int   selected_index;
+} CityPickerState;
+
 void ui_draw_alarm_list(C2D_TextBuf buf, SaveData* save, AlarmListState* state, C2D_Image settings_icon);
-void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode, u8 ringtone_id, bool is_new, const char* ringtone_name);
+void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode, u8 ringtone_id, bool is_new, const char* ringtone_name, const char* label);
 void ui_draw_alarm_delete_confirm(C2D_TextBuf buf);
-void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode, u32 frame_counter);
-void ui_draw_alarm_ringing_bottom(C2D_TextBuf buf, int h, int m, u8 repeat_mode);
+void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode, const char* label, u32 frame_counter);
+void ui_draw_alarm_ringing_bottom(C2D_TextBuf buf, int h, int m, u8 repeat_mode, const char* label);
 void ui_draw_alarm_missed_modal(C2D_TextBuf buf, int missed_count);
 void ui_draw_clock_bottom(C2D_TextBuf buf);
+void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListState* state, C2D_Image settings_icon);
+void ui_draw_city_picker(C2D_TextBuf buf, const SaveData* save, CityPickerState* state);
+void ui_draw_world_clock_delete_confirm(C2D_TextBuf buf, u8 city_id);
+void ui_draw_world_clock_set_home_confirm(C2D_TextBuf buf, u8 city_id);
+
+
 void ui_draw_stopwatch_idle(C2D_TextBuf buf);
 void ui_draw_stopwatch_running(C2D_TextBuf buf);
 void ui_draw_stopwatch_paused(C2D_TextBuf buf);

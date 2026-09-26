@@ -3,8 +3,9 @@
 #include "clock.h"
 #include "audio.h"
 #include <stdio.h>
+#include <string.h>
 
-int alarm_add(SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id) {
+int alarm_add(SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id, const char* label) {
     if (!save) return -1;
     if (save->alarm_count >= MAX_ALARMS) return -1;
 
@@ -16,6 +17,11 @@ int alarm_add(SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id
             save->alarms[i].minute = minute;
             save->alarms[i].repeat_mode = repeat_mode;
             save->alarms[i].ringtone_id = ringtone_id;
+            if (label) {
+                snprintf(save->alarms[i].label, sizeof(save->alarms[i].label), "%s", label);
+            } else {
+                save->alarms[i].label[0] = '\0';
+            }
 
             /* Guard against immediate triggering if scheduled time for today already passed */
             s64 now = get_display_time_seconds();
@@ -50,6 +56,7 @@ void alarm_delete(SaveData* save, int index) {
         /* Invalidate the last slot since everything shifted left */
         save->alarms[MAX_ALARMS - 1].id = ALARM_INVALID;
         save->alarms[MAX_ALARMS - 1].enabled = false;
+        save->alarms[MAX_ALARMS - 1].label[0] = '\0';
         
         /* Update IDs to match new positions */
         for (int i = 0; i < MAX_ALARMS; i++) {
@@ -126,7 +133,7 @@ static void alarm_check_missed(SaveData* save, AlarmSystem* sys, s64 prev, s64 n
             if (now - expected <= 600) {
                 if (alarm->last_fired_epoch < expected) {
                     alarm->last_fired_epoch = expected;
-                    sys->ringing_mask |= (1 << i);
+                    sys->ringing_mask |= (1U << i);
                     if (sys->state == ALARM_STATE_IDLE) {
                         sys->state = ALARM_STATE_RINGING;
                         sys->ring_start_epoch = now;
@@ -185,7 +192,7 @@ void alarm_tick(SaveData* save, AlarmSystem* sys) {
         if (valid_today && now >= today_fire_epoch && now < today_fire_epoch + 60) {
             if (alarm->last_fired_epoch < today_fire_epoch) {
                 alarm->last_fired_epoch = today_fire_epoch;
-                sys->ringing_mask |= (1 << i);
+                sys->ringing_mask |= (1U << i);
                 printf("ALARM %d TRIGGERED!\n", i);
                 if (sys->state == ALARM_STATE_IDLE) {
                     sys->state = ALARM_STATE_RINGING;
@@ -215,7 +222,7 @@ void alarm_dismiss_all(SaveData* save, AlarmSystem* sys) {
     if (!save || !sys) return;
     
     for (int i = 0; i < save->alarm_count; i++) {
-        if (sys->ringing_mask & (1 << i)) {
+        if (sys->ringing_mask & (1U << i)) {
             if (save->alarms[i].repeat_mode == REPEAT_ONCE) {
                 save->alarms[i].enabled = false;
             }

@@ -2,8 +2,9 @@
 #include <3ds/types.h>
 #include <stdbool.h>
 
-#define MAX_ALARMS    16
+#define MAX_ALARMS    32
 #define ALARM_INVALID 0xFF
+#define ALARM_LABEL_LEN 20
 
 typedef enum {
     REPEAT_ONCE,       /* Fire once, then auto-disable */
@@ -21,7 +22,11 @@ typedef struct {
     u8   ringtone_id;            /* Index into ringtone table */
     u8   _pad[2];                /* Align to 8-byte boundary */
     u64  last_fired_epoch;       /* app_time seconds when alarm last fired (monotonic guard) */
-} AlarmEntry;                    /* 16 bytes */
+    char label[ALARM_LABEL_LEN]; /* Alphanumeric label (up to 19 utf-8 chars + '\0') */
+    u8   _pad2[4];               /* Struct alignment to 40 bytes */
+} AlarmEntry;                    /* Exactly 40 bytes */
+
+_Static_assert(sizeof(AlarmEntry) == 40, "AlarmEntry must be exactly 40 bytes");
 
 typedef enum {
     ALARM_STATE_IDLE,     /* No alarm currently ringing */
@@ -30,7 +35,7 @@ typedef enum {
 
 typedef struct {
     /* Which alarms are currently ringing (bitmask, bit N = alarm index N) */
-    u16  ringing_mask;
+    u32  ringing_mask;
 
     /* Ring start timestamp (app_time seconds) for 10-minute auto-silence */
     u64  ring_start_epoch;
@@ -46,7 +51,7 @@ typedef struct {
 
 struct SaveData;
 
-int  alarm_add(struct SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id);
+int  alarm_add(struct SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id, const char* label);
 void alarm_delete(struct SaveData* save, int index);
 void alarm_update(struct SaveData* save, int index);
 
