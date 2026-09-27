@@ -16,7 +16,7 @@
 #define ARROW_TRI_W 20.0f      /* Arrow triangle width  (px)            */
 #define ARROW_TRI_H 14.0f      /* Arrow triangle height (px)            */
 #define ARROW_PAD 5.0f         /* Gap between arrow tip and digit edge  */
-#define BOTTOM_ACTION_Y 198.0f /* Top-Y of the bottom action row       */
+#define BOTTOM_ACTION_Y 176.0f /* Top-Y of the bottom action row       */
 
 /* ------------------------------------------------------------------ */
 /*  Alarm Stepper & Selector layout metrics (Add & Edit Alarm views)   */
@@ -43,8 +43,9 @@
 #define ALARM_SEL_BTN_RIGHT_X 256.0f /* Right arrow button X */
 #define ALARM_SEL_BTN_W 28.0f        /* Arrow button width                    */
 #define ALARM_SEL_ROW_H 26.0f        /* Row height                            */
-#define ALARM_SEL_TONE_Y 128.0f      /* Tone row Y                            */
-#define ALARM_SEL_REPEAT_Y 162.0f    /* Repeat row Y                          */
+#define ALARM_SEL_TONE_Y 138.0f      /* Tone row Y                            */
+#define ALARM_SEL_REPEAT_Y 170.0f    /* Repeat row Y                          */
+#define ALARM_SEL_LABEL_Y 202.0f     /* Label row Y                           */
 
 /* ------------------------------------------------------------------ */
 /*  HitRect layout constants                                           */
@@ -59,21 +60,21 @@ const HitRect TAB_TIMER = {240.0f, 200.0f, 80.0f, 40.0f};
 /* Global header bar hit target (top-right corner) */
 const HitRect BTN_SETTINGS_ICON = {280.0f, 0.0f, 40.0f, 32.0f};
 
-/* Time arrows — col centers x=80,160,240; Y estimated for scale 1.8 dh≈30 */
-const HitRect ARROW_H_UP = {55.0f, 52.0f, 50.0f, 30.0f};
-const HitRect ARROW_H_DOWN = {55.0f, 126.0f, 50.0f, 30.0f};
-const HitRect ARROW_M_UP = {135.0f, 52.0f, 50.0f, 30.0f};
-const HitRect ARROW_M_DOWN = {135.0f, 126.0f, 50.0f, 30.0f};
-const HitRect ARROW_S_UP = {215.0f, 52.0f, 50.0f, 30.0f};
-const HitRect ARROW_S_DOWN = {215.0f, 126.0f, 50.0f, 30.0f};
+/* Time arrows & buttons — 3 columns: Hour, Minute, Second. Total width 172px, centered at x=74 */
+HitRect ARROW_H_UP   = { 74.0f,  42.0f, 48.0f, 28.0f };
+HitRect ARROW_H_DOWN = { 74.0f, 112.0f, 48.0f, 28.0f };
+HitRect ARROW_M_UP   = { 136.0f,  42.0f, 48.0f, 28.0f };
+HitRect ARROW_M_DOWN = { 136.0f, 112.0f, 48.0f, 28.0f };
+HitRect ARROW_S_UP   = { 198.0f,  42.0f, 48.0f, 28.0f };
+HitRect ARROW_S_DOWN = { 198.0f, 112.0f, 48.0f, 28.0f };
 
-/* Date arrows — col centers x=70,160,250; Y estimated for scale 1.6 dh≈26 */
-const HitRect ARROW_COL1_UP = {45.0f, 55.0f, 50.0f, 30.0f};
-const HitRect ARROW_COL1_DOWN = {45.0f, 123.0f, 50.0f, 30.0f};
-const HitRect ARROW_COL2_UP = {135.0f, 55.0f, 50.0f, 30.0f};
-const HitRect ARROW_COL2_DOWN = {135.0f, 123.0f, 50.0f, 30.0f};
-const HitRect ARROW_COL3_UP = {225.0f, 55.0f, 50.0f, 30.0f};
-const HitRect ARROW_COL3_DOWN = {225.0f, 123.0f, 50.0f, 30.0f};
+/* Date arrows & buttons — initialized to EUR default (DD/MM/YYYY), dynamically updated by ui_update_date_hitboxes */
+HitRect ARROW_COL1_UP   = {  44.0f,  42.0f, 50.0f, 28.0f };
+HitRect ARROW_COL1_DOWN = {  44.0f, 112.0f, 50.0f, 28.0f };
+HitRect ARROW_COL2_UP   = { 114.0f,  42.0f, 50.0f, 28.0f };
+HitRect ARROW_COL2_DOWN = { 114.0f, 112.0f, 50.0f, 28.0f };
+HitRect ARROW_COL3_UP   = { 184.0f,  42.0f, 92.0f, 28.0f };
+HitRect ARROW_COL3_DOWN = { 184.0f, 112.0f, 92.0f, 28.0f };
 
 const HitRect BTN_FMT_LEFT = {20.0f, BOTTOM_ACTION_Y, 40.0f, 30.0f};
 const HitRect BTN_FMT_RIGHT = {260.0f, BOTTOM_ACTION_Y, 40.0f, 30.0f};
@@ -87,7 +88,7 @@ const HitRect BTN_SW_RESUME = {30.0f, 75.0f, 120.0f, 50.0f};
 const HitRect BTN_SW_RESET_PAUSED = {170.0f, 75.0f, 120.0f, 50.0f};
 
 /* Timer buttons */
-const HitRect BTN_TMR_START = {90.0f, 36.0f, 140.0f, 26.0f};
+const HitRect BTN_TMR_START = {90.0f, 164.0f, 140.0f, 28.0f};
 const HitRect BTN_TMR_PAUSE = {30.0f, 75.0f, 120.0f, 50.0f};
 const HitRect BTN_TMR_RESUME = {30.0f, 75.0f, 120.0f, 50.0f};
 const HitRect BTN_TMR_RESET = {170.0f, 75.0f, 120.0f, 50.0f};
@@ -106,17 +107,18 @@ const HitRect BTN_ALARM_TONE_LEFT = {ALARM_SEL_BTN_LEFT_X, ALARM_SEL_TONE_Y,
                                      ALARM_SEL_BTN_W, ALARM_SEL_ROW_H};
 const HitRect BTN_ALARM_TONE_RIGHT = {ALARM_SEL_BTN_RIGHT_X, ALARM_SEL_TONE_Y,
                                       ALARM_SEL_BTN_W, ALARM_SEL_ROW_H};
-const HitRect BTN_ALARM_LABEL_INPUT = {96.0f, 196.0f, 188.0f, 26.0f};
+const HitRect BTN_ALARM_TONE_PREVIEW = {ALARM_SEL_BOX_X, ALARM_SEL_TONE_Y,
+                                        ALARM_SEL_BOX_W, ALARM_SEL_ROW_H};
+const HitRect BTN_ALARM_LABEL_INPUT = {96.0f, ALARM_SEL_LABEL_Y, 188.0f, 26.0f};
 const HitRect BTN_ALARM_DISMISS = {60.0f, 140.0f, 200.0f, 40.0f};
 const HitRect BTN_ALARM_MISSED_OK = {60.0f, 140.0f, 200.0f, 40.0f};
 const HitRect BTN_TIMER_DISMISS = {60.0f, 140.0f, 200.0f, 40.0f};
 
-/* Dedicated 2-Column Alarm Stepper Arrows — col centers x=105, 215; Y estimated
- * for scale 1.5 dh≈28 */
-const HitRect ARROW_ALARM_H_UP = {80.0f, 35.0f, 50.0f, 26.0f};
-const HitRect ARROW_ALARM_H_DOWN = {80.0f, 89.0f, 50.0f, 28.0f};
-const HitRect ARROW_ALARM_M_UP = {190.0f, 35.0f, 50.0f, 26.0f};
-const HitRect ARROW_ALARM_M_DOWN = {190.0f, 89.0f, 50.0f, 28.0f};
+/* Dedicated 2-Column Alarm Stepper Arrows — centered 2-column card layout */
+const HitRect ARROW_ALARM_H_UP   = {  96.0f,  38.0f, 56.0f, 24.0f };
+const HitRect ARROW_ALARM_H_DOWN = {  96.0f,  98.0f, 56.0f, 24.0f };
+const HitRect ARROW_ALARM_M_UP   = { 168.0f,  38.0f, 56.0f, 24.0f };
+const HitRect ARROW_ALARM_M_DOWN = { 168.0f,  98.0f, 56.0f, 24.0f };
 
 /* Settings overlay buttons */
 const HitRect BTN_SET_BACK = {10.0f, 4.0f, 70.0f, 28.0f};
@@ -198,6 +200,20 @@ static void draw_arrow_down(float cx, float cy, float w, float h, u32 clr) {
                    0.0f);
 }
 
+static void draw_arrow_left(float cx, float cy, float w, float h, u32 clr) {
+  C2D_DrawTriangle(cx - w / 2.0f, cy, clr,            /* tip   */
+                   cx + w / 2.0f, cy - h / 2.0f, clr, /* top-R */
+                   cx + w / 2.0f, cy + h / 2.0f, clr, /* bot-R */
+                   0.0f);
+}
+
+static void draw_arrow_right(float cx, float cy, float w, float h, u32 clr) {
+  C2D_DrawTriangle(cx + w / 2.0f, cy, clr,            /* tip   */
+                   cx - w / 2.0f, cy - h / 2.0f, clr, /* top-L */
+                   cx - w / 2.0f, cy + h / 2.0f, clr, /* bot-L */
+                   0.0f);
+}
+
 static void draw_modal_bg(void) {
   C2D_DrawRectSolid(0, 0, 0.0f, 320, 240, CLR_OVERLAY);
   C2D_DrawRectSolid(20, 45, 0.0f, 280, 150, CLR_MODAL_BG);
@@ -216,57 +232,198 @@ static void draw_text_centered_x(C2D_TextBuf buf, const char *str, float y,
   C2D_DrawText(&text, C2D_WithColor, x, y, 0.0f, scale, scale, CLR_TEXT);
 }
 
-static void draw_time_editor(C2D_TextBuf buf, int h, int m, int s) {
-  float scale = 1.8f;
-  float cx_h = 80.0f;
-  float cx_m = 160.0f;
-  float cx_s = 240.0f;
+/* Helper to check if a HitRect is currently actively touched */
+static bool is_hitrect_touched(const HitRect *r) {
+  u32 kHeld = hidKeysHeld();
+  if (!(kHeld & KEY_TOUCH)) return false;
+  touchPosition touch;
+  hidTouchRead(&touch);
+  return (touch.px >= r->x && touch.px <= r->x + r->w &&
+          touch.py >= r->y && touch.py <= r->y + r->h);
+}
 
-  char hh[8], mm[4], ss[4];
+/* Draws an authentic 3DS System Settings stepper button with border bevel and centered arrow */
+static void draw_stepper_arrow_button(const HitRect *r, bool is_up) {
+  bool is_pressed = is_hitrect_touched(r);
+
+  /* Button beveled colors matching Nintendo 3DS System Settings look */
+  u32 clr_face = is_pressed ? C2D_Color32(0x38, 0x3A, 0x42, 0xFF) : C2D_Color32(0x56, 0x58, 0x62, 0xFF);
+  u32 clr_top  = is_pressed ? C2D_Color32(0x22, 0x24, 0x2A, 0xFF) : C2D_Color32(0x82, 0x86, 0x94, 0xFF);
+  u32 clr_left = is_pressed ? C2D_Color32(0x28, 0x2A, 0x30, 0xFF) : C2D_Color32(0x72, 0x76, 0x84, 0xFF);
+  u32 clr_bot  = is_pressed ? C2D_Color32(0x56, 0x58, 0x62, 0xFF) : C2D_Color32(0x28, 0x2A, 0x30, 0xFF);
+  u32 clr_rgt  = is_pressed ? C2D_Color32(0x48, 0x4A, 0x52, 0xFF) : C2D_Color32(0x32, 0x34, 0x3C, 0xFF);
+
+  /* Base button container */
+  C2D_DrawRectSolid(r->x, r->y, 0.0f, r->w, r->h, clr_face);
+
+  /* 1px beveled border */
+  C2D_DrawRectSolid(r->x, r->y, 0.0f, r->w, 1.0f, clr_top);
+  C2D_DrawRectSolid(r->x, r->y, 0.0f, 1.0f, r->h, clr_left);
+  C2D_DrawRectSolid(r->x, r->y + r->h - 1.0f, 0.0f, r->w, 1.0f, clr_bot);
+  C2D_DrawRectSolid(r->x + r->w - 1.0f, r->y, 0.0f, 1.0f, r->h, clr_rgt);
+
+  /* Centered white arrow glyph */
+  float cx = r->x + r->w / 2.0f;
+  float cy = r->y + r->h / 2.0f + (is_pressed ? 1.5f : 0.0f);
+  float tri_w = 16.0f;
+  float tri_h = 9.0f;
+  u32 arrow_clr = is_pressed ? C2D_Color32(0xB0, 0xB0, 0xB8, 0xFF) : C2D_Color32(0xFF, 0xFF, 0xFF, 0xFF);
+
+  if (is_up) {
+    draw_arrow_up(cx, cy, tri_w, tri_h, arrow_clr);
+  } else {
+    draw_arrow_down(cx, cy, tri_w, tri_h, arrow_clr);
+  }
+}
+
+/* Draws an authentic 3DS System Settings horizontal stepper button (< or >) with border bevel and centered triangle */
+static void draw_stepper_arrow_button_horizontal(const HitRect *r, bool is_left) {
+  bool is_pressed = is_hitrect_touched(r);
+
+  u32 clr_face = is_pressed ? C2D_Color32(0x38, 0x3A, 0x42, 0xFF) : C2D_Color32(0x56, 0x58, 0x62, 0xFF);
+  u32 clr_top  = is_pressed ? C2D_Color32(0x22, 0x24, 0x2A, 0xFF) : C2D_Color32(0x82, 0x86, 0x94, 0xFF);
+  u32 clr_left_edge = is_pressed ? C2D_Color32(0x28, 0x2A, 0x30, 0xFF) : C2D_Color32(0x72, 0x76, 0x84, 0xFF);
+  u32 clr_bot  = is_pressed ? C2D_Color32(0x56, 0x58, 0x62, 0xFF) : C2D_Color32(0x28, 0x2A, 0x30, 0xFF);
+  u32 clr_rgt  = is_pressed ? C2D_Color32(0x48, 0x4A, 0x52, 0xFF) : C2D_Color32(0x32, 0x34, 0x3C, 0xFF);
+
+  C2D_DrawRectSolid(r->x, r->y, 0.0f, r->w, r->h, clr_face);
+  C2D_DrawRectSolid(r->x, r->y, 0.0f, r->w, 1.0f, clr_top);
+  C2D_DrawRectSolid(r->x, r->y, 0.0f, 1.0f, r->h, clr_left_edge);
+  C2D_DrawRectSolid(r->x, r->y + r->h - 1.0f, 0.0f, r->w, 1.0f, clr_bot);
+  C2D_DrawRectSolid(r->x + r->w - 1.0f, r->y, 0.0f, 1.0f, r->h, clr_rgt);
+
+  float cx = r->x + r->w / 2.0f + (is_pressed ? (is_left ? -1.0f : 1.0f) : 0.0f);
+  float cy = r->y + r->h / 2.0f;
+  float tri_h = r->h * 0.45f;
+  float tri_w = tri_h * 0.65f;
+  u32 arrow_clr = is_pressed ? C2D_Color32(0xB0, 0xB0, 0xB8, 0xFF) : C2D_Color32(0xFF, 0xFF, 0xFF, 0xFF);
+
+  if (is_left) {
+    draw_arrow_left(cx, cy, tri_w, tri_h, arrow_clr);
+  } else {
+    draw_arrow_right(cx, cy, tri_w, tri_h, arrow_clr);
+  }
+}
+
+/* Draws a numeric value well channel connecting the top and bottom buttons */
+static void draw_stepper_column_well(C2D_TextBuf buf, float x, float y, float w, float h,
+                                     const char *value_str, float text_scale) {
+  /* Recessed well background */
+  C2D_DrawRectSolid(x, y, 0.0f, w, h, C2D_Color32(0x20, 0x20, 0x24, 0xFF));
+
+  /* Vertical channel borders */
+  C2D_DrawRectSolid(x, y, 0.0f, 1.0f, h, C2D_Color32(0x3E, 0x40, 0x48, 0xFF));
+  C2D_DrawRectSolid(x + w - 1.0f, y, 0.0f, 1.0f, h, C2D_Color32(0x3E, 0x40, 0x48, 0xFF));
+
+  /* Inset shadows at top and bottom of well */
+  C2D_DrawRectSolid(x, y, 0.0f, w, 1.0f, C2D_Color32(0x14, 0x14, 0x18, 0xFF));
+  C2D_DrawRectSolid(x, y + h - 1.0f, 0.0f, w, 1.0f, C2D_Color32(0x2E, 0x30, 0x36, 0xFF));
+
+  /* Parse and center value text inside the well */
+  C2D_Text txt;
+  C2D_TextParse(&txt, buf, value_str);
+  C2D_TextOptimize(&txt);
+
+  float tw, th;
+  C2D_TextGetDimensions(&txt, text_scale, text_scale, &tw, &th);
+
+  float tx = x + (w - tw) / 2.0f;
+  float ty = y + (h - th) / 2.0f;
+  C2D_DrawText(&txt, C2D_WithColor, tx, ty, 0.0f, text_scale, text_scale, CLR_TEXT);
+}
+
+/* Draws a separator glyph (':' or '/' or '-') centered between columns */
+static void draw_stepper_separator(C2D_TextBuf buf, float x, float y, float w, float h,
+                                   const char *sep_str, float text_scale) {
+  C2D_Text txt;
+  C2D_TextParse(&txt, buf, sep_str);
+  C2D_TextOptimize(&txt);
+
+  float tw, th;
+  C2D_TextGetDimensions(&txt, text_scale, text_scale, &tw, &th);
+
+  float tx = x + (w - tw) / 2.0f;
+  float ty = y + (h - th) / 2.0f;
+  C2D_DrawText(&txt, C2D_WithColor, tx, ty, 0.0f, text_scale, text_scale, C2D_Color32(0xD0, 0xD0, 0xD8, 0xFF));
+}
+
+/* Draws a column sub-label ('Hour', 'Minute', 'Second', 'Day', 'Month', 'Year') below the column */
+static void draw_stepper_sublabel(C2D_TextBuf buf, float col_x, float col_w, float y,
+                                  const char *label) {
+  C2D_Text txt;
+  C2D_TextParse(&txt, buf, label);
+  C2D_TextOptimize(&txt);
+
+  float scale = 0.48f;
+  float tw, th;
+  C2D_TextGetDimensions(&txt, scale, scale, &tw, &th);
+
+  float tx = col_x + (col_w - tw) / 2.0f;
+  C2D_DrawText(&txt, C2D_WithColor, tx, y, 0.0f, scale, scale, CLR_TEXT_DIM);
+}
+
+/* Updates Date Picker hitboxes dynamically based on active DateFormat */
+void ui_update_date_hitboxes(DateFormat fmt) {
+  float w_col1 = (fmt == DATEFMT_ISO) ? 92.0f : 50.0f;
+  float w_col2 = 50.0f;
+  float w_col3 = (fmt == DATEFMT_ISO) ? 50.0f : 92.0f;
+  float w_sep  = 20.0f;
+  float total_w = w_col1 + w_sep + w_col2 + w_sep + w_col3;
+  float start_x = (320.0f - total_w) / 2.0f;
+
+  float x1 = start_x;
+  float x2 = x1 + w_col1 + w_sep;
+  float x3 = x2 + w_col2 + w_sep;
+
+  float btn_y_up   = 42.0f;
+  float btn_y_down = 112.0f;
+  float btn_h      = 28.0f;
+
+  ARROW_COL1_UP   = (HitRect){ x1, btn_y_up,   w_col1, btn_h };
+  ARROW_COL1_DOWN = (HitRect){ x1, btn_y_down, w_col1, btn_h };
+  ARROW_COL2_UP   = (HitRect){ x2, btn_y_up,   w_col2, btn_h };
+  ARROW_COL2_DOWN = (HitRect){ x2, btn_y_down, w_col2, btn_h };
+  ARROW_COL3_UP   = (HitRect){ x3, btn_y_up,   w_col3, btn_h };
+  ARROW_COL3_DOWN = (HitRect){ x3, btn_y_down, w_col3, btn_h };
+}
+
+static void draw_time_editor(C2D_TextBuf buf, int h, int m, int s) {
+  char hh[8], mm[8], ss[8];
   snprintf(hh, sizeof(hh), "%02d", h);
   snprintf(mm, sizeof(mm), "%02d", m);
   snprintf(ss, sizeof(ss), "%02d", s);
 
-  C2D_Text t_h, t_m, t_s, t_col;
-  C2D_TextParse(&t_h, buf, hh);
-  C2D_TextOptimize(&t_h);
-  C2D_TextParse(&t_m, buf, mm);
-  C2D_TextOptimize(&t_m);
-  C2D_TextParse(&t_s, buf, ss);
-  C2D_TextOptimize(&t_s);
-  C2D_TextParse(&t_col, buf, ":");
-  C2D_TextOptimize(&t_col);
+  float well_y = ARROW_H_UP.y + ARROW_H_UP.h; /* 42 + 28 = 70.0f */
+  float well_h = ARROW_H_DOWN.y - well_y;     /* 112 - 70 = 42.0f */
+  float label_y = ARROW_H_DOWN.y + ARROW_H_DOWN.h + 5.0f; /* 112 + 28 + 5 = 145.0f */
 
-  /* Measure actual digit bounding box to centre everything */
-  float dw, dh, cw, ch;
-  C2D_TextGetDimensions(&t_h, scale, scale, &dw, &dh);
-  C2D_TextGetDimensions(&t_col, scale, scale, &cw, &ch);
+  /* Column 1: Hour */
+  draw_stepper_arrow_button(&ARROW_H_UP, true);
+  draw_stepper_column_well(buf, ARROW_H_UP.x, well_y, ARROW_H_UP.w, well_h, hh, 1.45f);
+  draw_stepper_arrow_button(&ARROW_H_DOWN, false);
+  draw_stepper_sublabel(buf, ARROW_H_UP.x, ARROW_H_UP.w, label_y, "Hour");
 
-  /* Digit row: vertically centred on STEPPER_CY */
-  float digit_y = STEPPER_CY - dh / 2.0f;
+  /* Separator 1: ":" */
+  float sep1_x = ARROW_H_UP.x + ARROW_H_UP.w;
+  float sep1_w = ARROW_M_UP.x - sep1_x;
+  draw_stepper_separator(buf, sep1_x, well_y, sep1_w, well_h, ":", 1.45f);
 
-  C2D_DrawText(&t_h, C2D_WithColor, cx_h - dw / 2.0f, digit_y, 0.0f, scale,
-               scale, CLR_TEXT);
-  C2D_DrawText(&t_col, C2D_WithColor, 120.0f - cw / 2.0f, digit_y, 0.0f, scale,
-               scale, CLR_TEXT);
-  C2D_DrawText(&t_m, C2D_WithColor, cx_m - dw / 2.0f, digit_y, 0.0f, scale,
-               scale, CLR_TEXT);
-  C2D_DrawText(&t_col, C2D_WithColor, 200.0f - cw / 2.0f, digit_y, 0.0f, scale,
-               scale, CLR_TEXT);
-  C2D_DrawText(&t_s, C2D_WithColor, cx_s - dw / 2.0f, digit_y, 0.0f, scale,
-               scale, CLR_TEXT);
+  /* Column 2: Minute */
+  draw_stepper_arrow_button(&ARROW_M_UP, true);
+  draw_stepper_column_well(buf, ARROW_M_UP.x, well_y, ARROW_M_UP.w, well_h, mm, 1.45f);
+  draw_stepper_arrow_button(&ARROW_M_DOWN, false);
+  draw_stepper_sublabel(buf, ARROW_M_UP.x, ARROW_M_UP.w, label_y, "Minute");
 
-  /* Arrows: symmetric pad from digit bounding box edges */
-  float up_cy = digit_y - ARROW_PAD - ARROW_TRI_H / 2.0f;
-  float down_cy = digit_y + dh + ARROW_PAD + ARROW_TRI_H / 2.0f;
+  /* Separator 2: ":" */
+  float sep2_x = ARROW_M_UP.x + ARROW_M_UP.w;
+  float sep2_w = ARROW_S_UP.x - sep2_x;
+  draw_stepper_separator(buf, sep2_x, well_y, sep2_w, well_h, ":", 1.45f);
 
-  draw_arrow_up(cx_h, up_cy, ARROW_TRI_W, ARROW_TRI_H, CLR_TEXT);
-  draw_arrow_up(cx_m, up_cy, ARROW_TRI_W, ARROW_TRI_H, CLR_TEXT);
-  draw_arrow_up(cx_s, up_cy, ARROW_TRI_W, ARROW_TRI_H, CLR_TEXT);
-
-  draw_arrow_down(cx_h, down_cy, ARROW_TRI_W, ARROW_TRI_H, CLR_TEXT);
-  draw_arrow_down(cx_m, down_cy, ARROW_TRI_W, ARROW_TRI_H, CLR_TEXT);
-  draw_arrow_down(cx_s, down_cy, ARROW_TRI_W, ARROW_TRI_H, CLR_TEXT);
+  /* Column 3: Second */
+  draw_stepper_arrow_button(&ARROW_S_UP, true);
+  draw_stepper_column_well(buf, ARROW_S_UP.x, well_y, ARROW_S_UP.w, well_h, ss, 1.45f);
+  draw_stepper_arrow_button(&ARROW_S_DOWN, false);
+  draw_stepper_sublabel(buf, ARROW_S_UP.x, ARROW_S_UP.w, label_y, "Second");
 }
 
 /* ------------------------------------------------------------------ */
@@ -817,7 +974,8 @@ void ui_draw_alarm_list(C2D_TextBuf buf, SaveData *save, AlarmListState *state,
 void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
                         u8 ringtone_id, bool is_new,
                         const char *ringtone_name,
-                        const char *label) {
+                        const char *label,
+                        bool is_playing) {
   /* 1. Header (Nav bar) */
   C2D_DrawRectSolid(0.0f, 0.0f, 0.0f, 320.0f, 36.0f, CLR_TAB_INACT);
   C2D_DrawRectSolid(0.0f, 35.0f, 0.0f, 320.0f, 1.0f, CLR_TAB_SEP);
@@ -828,49 +986,28 @@ void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
   draw_button_scaled(buf, &BTN_ALARM_EDIT_CANCEL, "Cancel", 0.55f, CLR_BTN);
   draw_button_scaled(buf, &BTN_ALARM_EDIT_SAVE, "Save", 0.55f, CLR_BTN);
 
-  /* 2. Time Stepper (hh : mm) */
+  /* 2. Time Stepper (hh : mm) using authentic 3DS card design */
   char str_h[8], str_m[8];
   snprintf(str_h, sizeof(str_h), "%02d", h);
   snprintf(str_m, sizeof(str_m), "%02d", m);
 
-  C2D_Text th, tm, tcol;
-  C2D_TextParse(&th, buf, str_h);
-  C2D_TextParse(&tm, buf, str_m);
-  C2D_TextParse(&tcol, buf, ":");
-  C2D_TextOptimize(&th);
-  C2D_TextOptimize(&tm);
-  C2D_TextOptimize(&tcol);
+  float well_y = ARROW_ALARM_H_UP.y + ARROW_ALARM_H_UP.h; /* 38 + 24 = 62.0f */
+  float well_h = ARROW_ALARM_H_DOWN.y - well_y;           /* 98 - 62 = 36.0f */
 
-  float tw_h, th_h, tw_m, th_m, tw_c, th_c;
-  C2D_TextGetDimensions(&th, ALARM_STEPPER_SCALE, ALARM_STEPPER_SCALE, &tw_h,
-                        &th_h);
-  C2D_TextGetDimensions(&tm, ALARM_STEPPER_SCALE, ALARM_STEPPER_SCALE, &tw_m,
-                        &th_m);
-  C2D_TextGetDimensions(&tcol, ALARM_STEPPER_SCALE, ALARM_STEPPER_SCALE, &tw_c,
-                        &th_c);
+  /* Column 1: Hour */
+  draw_stepper_arrow_button(&ARROW_ALARM_H_UP, true);
+  draw_stepper_column_well(buf, ARROW_ALARM_H_UP.x, well_y, ARROW_ALARM_H_UP.w, well_h, str_h, 1.35f);
+  draw_stepper_arrow_button(&ARROW_ALARM_H_DOWN, false);
 
-  /* Digit row: vertically centered on ALARM_STEPPER_CY */
-  float digit_y = ALARM_STEPPER_CY - th_h / 2.0f;
+  /* Separator: ":" */
+  float sep_x = ARROW_ALARM_H_UP.x + ARROW_ALARM_H_UP.w;
+  float sep_w = ARROW_ALARM_M_UP.x - sep_x;
+  draw_stepper_separator(buf, sep_x, well_y, sep_w, well_h, ":", 1.35f);
 
-  C2D_DrawText(&th, C2D_WithColor, ALARM_COL_H_CX - tw_h / 2.0f, digit_y, 0.0f,
-               ALARM_STEPPER_SCALE, ALARM_STEPPER_SCALE, CLR_TEXT);
-  C2D_DrawText(&tcol, C2D_WithColor, ALARM_COL_COLON_CX - tw_c / 2.0f, digit_y,
-               0.0f, ALARM_STEPPER_SCALE, ALARM_STEPPER_SCALE, CLR_TEXT);
-  C2D_DrawText(&tm, C2D_WithColor, ALARM_COL_M_CX - tw_m / 2.0f, digit_y, 0.0f,
-               ALARM_STEPPER_SCALE, ALARM_STEPPER_SCALE, CLR_TEXT);
-
-  /* Arrows: symmetric pad from digit bounding box edges */
-  float up_cy = digit_y - ALARM_ARROW_PAD - ALARM_ARROW_TRI_H / 2.0f;
-  float down_cy = digit_y + th_h + ALARM_ARROW_PAD + ALARM_ARROW_TRI_H / 2.0f;
-
-  draw_arrow_up(ALARM_COL_H_CX, up_cy, ALARM_ARROW_TRI_W, ALARM_ARROW_TRI_H,
-                CLR_TEXT);
-  draw_arrow_up(ALARM_COL_M_CX, up_cy, ALARM_ARROW_TRI_W, ALARM_ARROW_TRI_H,
-                CLR_TEXT);
-  draw_arrow_down(ALARM_COL_H_CX, down_cy, ALARM_ARROW_TRI_W, ALARM_ARROW_TRI_H,
-                  CLR_TEXT);
-  draw_arrow_down(ALARM_COL_M_CX, down_cy, ALARM_ARROW_TRI_W, ALARM_ARROW_TRI_H,
-                  CLR_TEXT);
+  /* Column 2: Minute */
+  draw_stepper_arrow_button(&ARROW_ALARM_M_UP, true);
+  draw_stepper_column_well(buf, ARROW_ALARM_M_UP.x, well_y, ARROW_ALARM_M_UP.w, well_h, str_m, 1.35f);
+  draw_stepper_arrow_button(&ARROW_ALARM_M_DOWN, false);
 
   /* 3. Ringtone Selector — Centered unit: [Tone:] [<] [ Value Container ] [>]
    */
@@ -883,20 +1020,30 @@ void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
   C2D_DrawText(&txt_tone, C2D_WithColor, ALARM_SEL_LABEL_R - tw_tl, y_tone_lbl,
                0.0f, 0.55f, 0.55f, CLR_TEXT);
 
-  draw_button_scaled(buf, &BTN_ALARM_TONE_LEFT, "<", 0.55f, CLR_BTN);
-  draw_button_scaled(buf, &BTN_ALARM_TONE_RIGHT, ">", 0.55f, CLR_BTN);
+  draw_stepper_arrow_button_horizontal(&BTN_ALARM_TONE_LEFT, true);
+  draw_stepper_arrow_button_horizontal(&BTN_ALARM_TONE_RIGHT, false);
 
-  /* Ringtone value container */
-  C2D_DrawRectSolid(ALARM_SEL_BOX_X, ALARM_SEL_TONE_Y, 0.0f, ALARM_SEL_BOX_W,
-                    ALARM_SEL_ROW_H, C2D_Color32(0x22, 0x22, 0x22, 0xFF));
+  /* Ringtone value container (interactive preview button with amber playing state) */
+  u32 bg_tone = is_playing ? C2D_Color32(0x7A, 0x52, 0x14, 0xFF)
+                           : C2D_Color32(0x22, 0x22, 0x22, 0xFF);
+  u32 border_tone = is_playing ? C2D_Color32(0xD0, 0x90, 0x20, 0xFF)
+                               : C2D_Color32(0x38, 0x3C, 0x48, 0xFF);
+
+  C2D_DrawRectSolid(BTN_ALARM_TONE_PREVIEW.x, BTN_ALARM_TONE_PREVIEW.y, 0.0f,
+                    BTN_ALARM_TONE_PREVIEW.w, BTN_ALARM_TONE_PREVIEW.h, bg_tone);
+  C2D_DrawRectSolid(BTN_ALARM_TONE_PREVIEW.x, BTN_ALARM_TONE_PREVIEW.y, 0.0f, BTN_ALARM_TONE_PREVIEW.w, 1.0f, border_tone);
+  C2D_DrawRectSolid(BTN_ALARM_TONE_PREVIEW.x, BTN_ALARM_TONE_PREVIEW.y + BTN_ALARM_TONE_PREVIEW.h - 1.0f, 0.0f, BTN_ALARM_TONE_PREVIEW.w, 1.0f, border_tone);
+  C2D_DrawRectSolid(BTN_ALARM_TONE_PREVIEW.x, BTN_ALARM_TONE_PREVIEW.y, 0.0f, 1.0f, BTN_ALARM_TONE_PREVIEW.h, border_tone);
+  C2D_DrawRectSolid(BTN_ALARM_TONE_PREVIEW.x + BTN_ALARM_TONE_PREVIEW.w - 1.0f, BTN_ALARM_TONE_PREVIEW.y, 0.0f, 1.0f, BTN_ALARM_TONE_PREVIEW.h, border_tone);
+
   C2D_Text txt_rn;
   C2D_TextParse(&txt_rn, buf, ringtone_name ? ringtone_name : "Default");
   C2D_TextOptimize(&txt_rn);
   float tw_rn, th_rn;
   C2D_TextGetDimensions(&txt_rn, 0.50f, 0.50f, &tw_rn, &th_rn);
   C2D_DrawText(&txt_rn, C2D_WithColor,
-               ALARM_SEL_BOX_X + (ALARM_SEL_BOX_W - tw_rn) / 2.0f,
-               ALARM_SEL_TONE_Y + (ALARM_SEL_ROW_H - th_rn) / 2.0f, 0.0f, 0.50f,
+               BTN_ALARM_TONE_PREVIEW.x + (BTN_ALARM_TONE_PREVIEW.w - tw_rn) / 2.0f,
+               BTN_ALARM_TONE_PREVIEW.y + (BTN_ALARM_TONE_PREVIEW.h - th_rn) / 2.0f, 0.0f, 0.50f,
                0.50f, CLR_TEXT);
 
   /* 4. Repeat Selector — Centered unit: [Repeat:] [<] [ Value Container ] [>]
@@ -910,8 +1057,8 @@ void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
   C2D_DrawText(&txt_rep, C2D_WithColor, ALARM_SEL_LABEL_R - tw_rl, y_rep_lbl,
                0.0f, 0.55f, 0.55f, CLR_TEXT);
 
-  draw_button_scaled(buf, &BTN_ALARM_REPEAT_LEFT, "<", 0.55f, CLR_BTN);
-  draw_button_scaled(buf, &BTN_ALARM_REPEAT_RIGHT, ">", 0.55f, CLR_BTN);
+  draw_stepper_arrow_button_horizontal(&BTN_ALARM_REPEAT_LEFT, true);
+  draw_stepper_arrow_button_horizontal(&BTN_ALARM_REPEAT_RIGHT, false);
 
   /* Repeat value container */
   C2D_DrawRectSolid(ALARM_SEL_BOX_X, ALARM_SEL_REPEAT_Y, 0.0f, ALARM_SEL_BOX_W,
@@ -1443,6 +1590,9 @@ void ui_draw_settings_edit_time(C2D_TextBuf buf, int h, int m, int s) {
 
 void ui_draw_settings_edit_date(C2D_TextBuf buf, int y, int m, int d,
                                 DateFormat fmt) {
+  /* Synchronize hitboxes dynamically to active date format */
+  ui_update_date_hitboxes(fmt);
+
   /* Nav bar (y=0..36) */
   C2D_DrawRectSolid(0.0f, 0.0f, 0.0f, 320.0f, 36.0f, CLR_TAB_INACT);
   C2D_DrawRectSolid(0.0f, 35.0f, 0.0f, 320.0f, 1.0f, CLR_TAB_SEP);
@@ -1450,54 +1600,61 @@ void ui_draw_settings_edit_date(C2D_TextBuf buf, int y, int m, int d,
   draw_button(buf, &BTN_SET_SAVE, "Save");
   draw_text_centered_x(buf, "Edit Date", 8.0f, 0.7f, 320.0f);
 
-  /* Column strings based on format */
+  /* Column strings and labels based on active format */
   char c1[8], c2[8], c3[8];
+  const char *l1, *l2, *l3;
+  const char *sep_str = (fmt == DATEFMT_ISO) ? "-" : "/";
+  float s1, s2, s3;
+
   if (fmt == DATEFMT_ISO) {
-    snprintf(c1, sizeof(c1), "%04d", y);
-    snprintf(c2, sizeof(c2), "%02d", m);
-    snprintf(c3, sizeof(c3), "%02d", d);
+    snprintf(c1, sizeof(c1), "%04d", y); l1 = "Year";  s1 = 1.20f;
+    snprintf(c2, sizeof(c2), "%02d", m); l2 = "Month"; s2 = 1.40f;
+    snprintf(c3, sizeof(c3), "%02d", d); l3 = "Day";   s3 = 1.40f;
   } else if (fmt == DATEFMT_US) {
-    snprintf(c1, sizeof(c1), "%02d", m);
-    snprintf(c2, sizeof(c2), "%02d", d);
-    snprintf(c3, sizeof(c3), "%04d", y);
+    snprintf(c1, sizeof(c1), "%02d", m); l1 = "Month"; s1 = 1.40f;
+    snprintf(c2, sizeof(c2), "%02d", d); l2 = "Day";   s2 = 1.40f;
+    snprintf(c3, sizeof(c3), "%04d", y); l3 = "Year";  s3 = 1.20f;
   } else { /* DATEFMT_EUR */
-    snprintf(c1, sizeof(c1), "%02d", d);
-    snprintf(c2, sizeof(c2), "%02d", m);
-    snprintf(c3, sizeof(c3), "%04d", y);
+    snprintf(c1, sizeof(c1), "%02d", d); l1 = "Day";   s1 = 1.40f;
+    snprintf(c2, sizeof(c2), "%02d", m); l2 = "Month"; s2 = 1.40f;
+    snprintf(c3, sizeof(c3), "%04d", y); l3 = "Year";  s3 = 1.20f;
   }
 
-  float cx[3] = {70.0f, 160.0f, 250.0f};
-  const char *c_str[3] = {c1, c2, c3};
-  float scale = 1.6f;
+  float well_y = ARROW_COL1_UP.y + ARROW_COL1_UP.h; /* 42 + 28 = 70.0f */
+  float well_h = ARROW_COL1_DOWN.y - well_y;       /* 112 - 70 = 42.0f */
+  float label_y = ARROW_COL1_DOWN.y + ARROW_COL1_DOWN.h + 5.0f; /* 145.0f */
 
-  /* Measure digit height once (all columns use the same font/scale) */
-  C2D_Text probe;
-  C2D_TextParse(&probe, buf, "00");
-  C2D_TextOptimize(&probe);
-  float pw, ph;
-  C2D_TextGetDimensions(&probe, scale, scale, &pw, &ph);
+  /* Column 1 */
+  draw_stepper_arrow_button(&ARROW_COL1_UP, true);
+  draw_stepper_column_well(buf, ARROW_COL1_UP.x, well_y, ARROW_COL1_UP.w, well_h, c1, s1);
+  draw_stepper_arrow_button(&ARROW_COL1_DOWN, false);
+  draw_stepper_sublabel(buf, ARROW_COL1_UP.x, ARROW_COL1_UP.w, label_y, l1);
 
-  float digit_y = STEPPER_CY - ph / 2.0f;
-  float up_cy = digit_y - ARROW_PAD - ARROW_TRI_H / 2.0f;
-  float down_cy = digit_y + ph + ARROW_PAD + ARROW_TRI_H / 2.0f;
+  /* Separator 1 */
+  float sep1_x = ARROW_COL1_UP.x + ARROW_COL1_UP.w;
+  float sep1_w = ARROW_COL2_UP.x - sep1_x;
+  draw_stepper_separator(buf, sep1_x, well_y, sep1_w, well_h, sep_str, 1.45f);
 
-  for (int i = 0; i < 3; i++) {
-    C2D_Text txt;
-    C2D_TextParse(&txt, buf, c_str[i]);
-    C2D_TextOptimize(&txt);
+  /* Column 2 */
+  draw_stepper_arrow_button(&ARROW_COL2_UP, true);
+  draw_stepper_column_well(buf, ARROW_COL2_UP.x, well_y, ARROW_COL2_UP.w, well_h, c2, s2);
+  draw_stepper_arrow_button(&ARROW_COL2_DOWN, false);
+  draw_stepper_sublabel(buf, ARROW_COL2_UP.x, ARROW_COL2_UP.w, label_y, l2);
 
-    float tw, th;
-    C2D_TextGetDimensions(&txt, scale, scale, &tw, &th);
-    C2D_DrawText(&txt, C2D_WithColor, cx[i] - tw / 2.0f, digit_y, 0.0f, scale,
-                 scale, CLR_TEXT);
+  /* Separator 2 */
+  float sep2_x = ARROW_COL2_UP.x + ARROW_COL2_UP.w;
+  float sep2_w = ARROW_COL3_UP.x - sep2_x;
+  draw_stepper_separator(buf, sep2_x, well_y, sep2_w, well_h, sep_str, 1.45f);
 
-    draw_arrow_up(cx[i], up_cy, ARROW_TRI_W, ARROW_TRI_H, CLR_TEXT);
-    draw_arrow_down(cx[i], down_cy, ARROW_TRI_W, ARROW_TRI_H, CLR_TEXT);
-  }
+  /* Column 3 */
+  draw_stepper_arrow_button(&ARROW_COL3_UP, true);
+  draw_stepper_column_well(buf, ARROW_COL3_UP.x, well_y, ARROW_COL3_UP.w, well_h, c3, s3);
+  draw_stepper_arrow_button(&ARROW_COL3_DOWN, false);
+  draw_stepper_sublabel(buf, ARROW_COL3_UP.x, ARROW_COL3_UP.w, label_y, l3);
 
   /* Date format selector bar — pushed to bottom action row */
-  draw_button(buf, &BTN_FMT_LEFT, "<");
-  draw_button(buf, &BTN_FMT_RIGHT, ">");
+  draw_stepper_arrow_button_horizontal(&BTN_FMT_LEFT, true);
+  draw_stepper_arrow_button_horizontal(&BTN_FMT_RIGHT, false);
 
   const char *fmt_str = "DD/MM/YYYY (EUR)";
   if (fmt == DATEFMT_ISO) {

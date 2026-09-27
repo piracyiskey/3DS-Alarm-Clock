@@ -528,6 +528,7 @@ int main(int argc, char* argv[])
                     clock_get_hms(&edit_h, &edit_m, &edit_s);
                     clock_get_ymd(&edit_y, &edit_mo, &edit_d);
                     edit_fmt = (DateFormat)save.date_format;
+                    ui_update_date_hitboxes(edit_fmt);
                     memset(hr_time, 0, sizeof(hr_time));
                     memset(hr_date, 0, sizeof(hr_date));
                     settings_sub = SET_EDIT_TIME;
@@ -569,6 +570,7 @@ int main(int argc, char* argv[])
                     settings_sub = SET_SAVE_OK;
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_EDIT_DATE)) {
                     memset(hr_date, 0, sizeof(hr_date));
+                    ui_update_date_hitboxes(edit_fmt);
                     settings_sub = SET_EDIT_DATE;
                 } else {
                     hold_repeat_update(&hr_time[0], tHeld && touch_hit(touch.px, touch.py, &ARROW_H_UP));
@@ -598,8 +600,10 @@ int main(int argc, char* argv[])
                     settings_sub = SET_SAVE_OK;
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_FMT_LEFT)) {
                     edit_fmt = (edit_fmt == DATEFMT_ISO) ? DATEFMT_US : (DateFormat)(edit_fmt - 1);
+                    ui_update_date_hitboxes(edit_fmt);
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_FMT_RIGHT)) {
                     edit_fmt = (edit_fmt == DATEFMT_US) ? DATEFMT_ISO : (DateFormat)(edit_fmt + 1);
+                    ui_update_date_hitboxes(edit_fmt);
                 } else {
                     hold_repeat_update(&hr_date[0], tHeld && touch_hit(touch.px, touch.py, &ARROW_COL1_UP));
                     hold_repeat_update(&hr_date[1], tHeld && touch_hit(touch.px, touch.py, &ARROW_COL1_DOWN));
@@ -632,8 +636,10 @@ int main(int argc, char* argv[])
             bool is_new = (alarm_view == STATE_ALARM_ADD);
 
             if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_EDIT_CANCEL))) {
+                audio_stop();
                 alarm_view = ALARM_VIEW_LIST;
             } else if (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_EDIT_SAVE)) {
+                audio_stop();
                 if (is_new) {
                     int new_idx = alarm_add(&save, edit_alarm_h, edit_alarm_m, edit_alarm_repeat, edit_alarm_tone, edit_alarm_label);
                     if (new_idx >= 0) {
@@ -675,6 +681,7 @@ int main(int argc, char* argv[])
                 }
                 alarm_view = ALARM_VIEW_LIST;
             } else if (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_LABEL_INPUT)) {
+                audio_stop();
                 SwkbdState swkbd;
                 char kbd_buf[ALARM_LABEL_LEN];
                 swkbdInit(&swkbd, SWKBD_TYPE_NORMAL, 2, ALARM_LABEL_LEN - 1);
@@ -686,10 +693,18 @@ int main(int argc, char* argv[])
                 if (button == SWKBD_BUTTON_CONFIRM) {
                     snprintf(edit_alarm_label, sizeof(edit_alarm_label), "%s", kbd_buf);
                 }
+            } else if (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_TONE_PREVIEW)) {
+                if (audio_is_playing()) {
+                    audio_stop();
+                } else {
+                    audio_play_preview(edit_alarm_tone);
+                }
             } else if (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_TONE_LEFT)) {
+                audio_stop();
                 if (edit_alarm_tone == 0) edit_alarm_tone = audio_get_ringtone_count() - 1;
                 else edit_alarm_tone--;
             } else if (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_TONE_RIGHT)) {
+                audio_stop();
                 edit_alarm_tone = (edit_alarm_tone + 1) % audio_get_ringtone_count();
             } else if (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_REPEAT_LEFT)) {
                 if (edit_alarm_repeat == 0) edit_alarm_repeat = 3;
@@ -1292,7 +1307,7 @@ int main(int argc, char* argv[])
             } else if (alarm_view == STATE_ALARM_ADD || alarm_view == STATE_ALARM_EDIT) {
                 const char* rname = audio_get_ringtone_name(edit_alarm_tone);
                 bool is_new = (alarm_view == STATE_ALARM_ADD);
-                ui_draw_alarm_edit(textBuf, edit_alarm_h, edit_alarm_m, edit_alarm_repeat, edit_alarm_tone, is_new, rname, edit_alarm_label);
+                ui_draw_alarm_edit(textBuf, edit_alarm_h, edit_alarm_m, edit_alarm_repeat, edit_alarm_tone, is_new, rname, edit_alarm_label, audio_is_playing());
             } else {
                 /* Draw global header bar for non-alarm/non-clock tabs (alarm list and world clock draw their own headers) */
                 if (active_mode != MODE_ALARM && active_mode != MODE_CLOCK) {

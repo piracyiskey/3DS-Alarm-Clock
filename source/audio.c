@@ -35,6 +35,8 @@ static bool          s_is_timer_active    = false;
 /* Playback engine state */
 static u8            s_active_ringtone_id = 0;
 static volatile bool s_is_playing         = false;
+static volatile bool s_is_looping         = true;
+static volatile bool s_eof_reached        = false;
 static volatile bool s_audio_suspended     = false;
 static volatile bool s_audio_quit         = false;
 static float         s_volume             = 1.0f;
@@ -71,10 +73,21 @@ static void audio_thread_entry(void* arg) {
     while (!s_audio_quit) {
         LightLock_Lock(&s_audio_lock);
         if (s_is_playing && !s_audio_suspended) {
+            bool any_busy = false;
             for (int i = 0; i < AUDIO_NUM_BUFFERS; i++) {
                 if (s_waveBuf[i].status == NDSP_WBUF_DONE) {
-                    refill_and_queue_buffer(i);
+                    if (!s_eof_reached) {
+                        refill_and_queue_buffer(i);
+                        if (s_waveBuf[i].status != NDSP_WBUF_DONE) {
+                            any_busy = true;
+                        }
+                    }
+                } else {
+                    any_busy = true;
                 }
+            }
+            if (!s_is_looping && s_eof_reached && !any_busy) {
+                audio_stop_internal();
             }
         }
         LightLock_Unlock(&s_audio_lock);
@@ -101,11 +114,17 @@ static void refill_and_queue_buffer(int buf_idx) {
             filled += (u32)bytes_read;
 
             if (err == MPG123_DONE || bytes_read == 0) {
-                /* End of MP3 file reached: loop back to sample frame 0 */
-                if (mpg123_seek(s_mpg, 0, SEEK_SET) < 0) {
+                if (s_is_looping) {
+                    /* End of MP3 file reached: loop back to sample frame 0 */
+                    if (mpg123_seek(s_mpg, 0, SEEK_SET) < 0) {
+                        break;
+                    }
+                } else {
+                    s_eof_reached = true;
                     break;
                 }
             } else if (err != MPG123_OK && err != MPG123_NEW_FORMAT) {
+                if (!s_is_looping) s_eof_reached = true;
                 break;
             }
         }
@@ -119,8 +138,13 @@ static void refill_and_queue_buffer(int buf_idx) {
             /* Strict sample frame alignment to prevent 1-byte channel/byte desync */
             to_copy -= (to_copy % frame_size);
             if (to_copy == 0) {
-                s_pcm_offset = 0;
-                continue;
+                if (s_is_looping) {
+                    s_pcm_offset = 0;
+                    continue;
+                } else {
+                    s_eof_reached = true;
+                    break;
+                }
             }
 
             memcpy(dest + filled, info->pcm_data + s_pcm_offset, to_copy);
@@ -128,14 +152,23 @@ static void refill_and_queue_buffer(int buf_idx) {
             s_pcm_offset += to_copy;
 
             if (s_pcm_offset >= info->pcm_size) {
-                s_pcm_offset = 0; /* Clean loop wrap */
+                if (s_is_looping) {
+                    s_pcm_offset = 0; /* Clean loop wrap */
+                } else {
+                    s_eof_reached = true;
+                    break;
+                }
             }
         }
     }
 
     if (filled == 0) {
-        memset(dest, 0, target_bytes);
-        filled = target_bytes;
+        s_waveBuf[buf_idx].nsamples = 0;
+        return;
+    }
+
+    if (filled < target_bytes) {
+        memset(dest + filled, 0, target_bytes - filled);
     }
 
     s_waveBuf[buf_idx].nsamples = filled / frame_size;
@@ -267,6 +300,8 @@ static void audio_stop_internal(void) {
 
     s_is_playing = false;
     s_is_timer_active = false;
+    s_is_looping = true;
+    s_eof_reached = false;
 
     ndspChnReset(0);
     ndspChnWaveBufClear(0);
@@ -286,11 +321,13 @@ void audio_stop(void) {
     LightLock_Unlock(&s_audio_lock);
 }
 
-void audio_play(u8 ringtone_id) {
+static void audio_play_internal(u8 ringtone_id, bool loop) {
     LightLock_Lock(&s_audio_lock);
 
     audio_stop_internal();
     s_is_timer_active = false;
+    s_is_looping = loop;
+    s_eof_reached = false;
 
     if (ringtone_id >= ringtone_count) {
         ringtone_id = 0;
@@ -305,7 +342,7 @@ void audio_play(u8 ringtone_id) {
         }
         if (!s_mpg || mpg123_open(s_mpg, info->sd_path) != MPG123_OK) {
             LightLock_Unlock(&s_audio_lock);
-            if (ringtone_id != 0) audio_play(0);
+            if (ringtone_id != 0) audio_play_internal(0, loop);
             return;
         }
 
@@ -314,7 +351,7 @@ void audio_play(u8 ringtone_id) {
         if (mpg123_getformat(s_mpg, &rate, &channels, &encoding) != MPG123_OK) {
             mpg123_close(s_mpg);
             LightLock_Unlock(&s_audio_lock);
-            if (ringtone_id != 0) audio_play(0);
+            if (ringtone_id != 0) audio_play_internal(0, loop);
             return;
         }
 
@@ -340,11 +377,21 @@ void audio_play(u8 ringtone_id) {
     /* Prime and queue initial wave buffers */
     for (int i = 0; i < AUDIO_NUM_BUFFERS; i++) {
         s_waveBuf[i].status = NDSP_WBUF_DONE;
-        refill_and_queue_buffer(i);
+        if (!s_eof_reached) {
+            refill_and_queue_buffer(i);
+        }
     }
 
     s_is_playing = true;
     LightLock_Unlock(&s_audio_lock);
+}
+
+void audio_play(u8 ringtone_id) {
+    audio_play_internal(ringtone_id, true);
+}
+
+void audio_play_preview(u8 ringtone_id) {
+    audio_play_internal(ringtone_id, false);
 }
 
 void audio_play_timer(void) {
@@ -352,6 +399,8 @@ void audio_play_timer(void) {
 
     audio_stop_internal();
     s_is_timer_active = true;
+    s_is_looping = true;
+    s_eof_reached = false;
 
     s_current_rate = s_timer_tone.sample_rate;
     s_current_channels = s_timer_tone.channels;
@@ -367,7 +416,9 @@ void audio_play_timer(void) {
     /* Prime and queue initial wave buffers */
     for (int i = 0; i < AUDIO_NUM_BUFFERS; i++) {
         s_waveBuf[i].status = NDSP_WBUF_DONE;
-        refill_and_queue_buffer(i);
+        if (!s_eof_reached) {
+            refill_and_queue_buffer(i);
+        }
     }
 
     s_is_playing = true;

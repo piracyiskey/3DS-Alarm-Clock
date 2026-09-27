@@ -44,16 +44,18 @@ extern const HitRect TAB_TIMER;
 extern const HitRect BTN_SETTINGS_ICON;
 
 /* --- Shared Time Arrow layout --- */
-extern const HitRect ARROW_H_UP,   ARROW_H_DOWN;
-extern const HitRect ARROW_M_UP,   ARROW_M_DOWN;
-extern const HitRect ARROW_S_UP,   ARROW_S_DOWN;
+extern HitRect ARROW_H_UP,   ARROW_H_DOWN;
+extern HitRect ARROW_M_UP,   ARROW_M_DOWN;
+extern HitRect ARROW_S_UP,   ARROW_S_DOWN;
 
 /* --- Date Edit Column Arrows & Buttons --- */
-extern const HitRect ARROW_COL1_UP, ARROW_COL1_DOWN;
-extern const HitRect ARROW_COL2_UP, ARROW_COL2_DOWN;
-extern const HitRect ARROW_COL3_UP, ARROW_COL3_DOWN;
+extern HitRect ARROW_COL1_UP, ARROW_COL1_DOWN;
+extern HitRect ARROW_COL2_UP, ARROW_COL2_DOWN;
+extern HitRect ARROW_COL3_UP, ARROW_COL3_DOWN;
 extern const HitRect BTN_FMT_LEFT;
 extern const HitRect BTN_FMT_RIGHT;
+
+void ui_update_date_hitboxes(DateFormat fmt);
 
 /* --- Stopwatch buttons --- */
 extern const HitRect BTN_SW_START;
@@ -85,6 +87,7 @@ extern const HitRect BTN_ALARM_REPEAT_LEFT;
 extern const HitRect BTN_ALARM_REPEAT_RIGHT;
 extern const HitRect BTN_ALARM_TONE_LEFT;
 extern const HitRect BTN_ALARM_TONE_RIGHT;
+extern const HitRect BTN_ALARM_TONE_PREVIEW;
 extern const HitRect BTN_ALARM_LABEL_INPUT;
 extern const HitRect BTN_ALARM_DISMISS;
 extern const HitRect BTN_ALARM_MISSED_OK;
@@ -173,7 +176,7 @@ typedef struct {
 } CityPickerState;
 
 void ui_draw_alarm_list(C2D_TextBuf buf, SaveData* save, AlarmListState* state, C2D_Image settings_icon, C2D_Image trash_icon);
-void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode, u8 ringtone_id, bool is_new, const char* ringtone_name, const char* label);
+void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode, u8 ringtone_id, bool is_new, const char* ringtone_name, const char* label, bool is_playing);
 void ui_draw_alarm_delete_confirm(C2D_TextBuf buf);
 void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode, const char* label, u32 frame_counter);
 void ui_draw_alarm_ringing_bottom(C2D_TextBuf buf, int h, int m, u8 repeat_mode, const char* label);

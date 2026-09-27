@@ -34,6 +34,7 @@ const char* audio_get_ringtone_name(int index);
 
 /* Playback Control */
 void        audio_play(u8 ringtone_id);
+void        audio_play_preview(u8 ringtone_id);
 void        audio_play_timer(void);
 void        audio_stop(void);
 void        audio_tick(void);
