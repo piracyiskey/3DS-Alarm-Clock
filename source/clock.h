@@ -13,6 +13,7 @@ s64  get_display_time_seconds(void);
 void clock_apply_time_edit(int h, int m, int s, SaveData* save);
 void clock_apply_date_edit(int y, int m, int d, SaveData* save);
 void clock_reset(SaveData* save);
+void clock_reset_time(SaveData* save);
 bool clock_has_offset(void);
 s32  clock_get_time_offset_s(void);
 s32  clock_get_date_offset_days(void);

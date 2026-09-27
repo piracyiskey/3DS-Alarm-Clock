@@ -123,14 +123,26 @@ const HitRect ARROW_ALARM_M_DOWN = { 168.0f,  98.0f, 56.0f, 24.0f };
 /* Settings overlay buttons */
 const HitRect BTN_SET_BACK = {10.0f, 4.0f, 70.0f, 28.0f};
 const HitRect BTN_SET_SAVE = {240.0f, 4.0f, 70.0f, 28.0f};
+const HitRect BTN_SET_TIME_DATE = {40.0f, 72.0f, 240.0f, 48.0f};
+const HitRect BTN_SET_DISPLAY = {40.0f, 136.0f, 240.0f, 48.0f};
+
+/* Sub-menu "Edit Time & Date" buttons */
+const HitRect BTN_SET_EDIT_TIME = {40.0f, 56.0f, 240.0f, 40.0f};
+const HitRect BTN_SET_EDIT_DATE_BTN = {40.0f, 112.0f, 240.0f, 40.0f};
+const HitRect BTN_SET_RESET = {40.0f, 168.0f, 240.0f, 40.0f};
+
+/* Edit Time bottom action */
+const HitRect BTN_RESET_TIME = {80.0f, BOTTOM_ACTION_Y, 160.0f, 30.0f};
+
+/* Preserved aliases */
 const HitRect BTN_SET_EDIT = {40.0f, 56.0f, 240.0f, 40.0f};
-const HitRect BTN_SET_RESET = {40.0f, 112.0f, 240.0f, 40.0f};
-const HitRect BTN_SET_DISPLAY = {40.0f, 168.0f, 240.0f, 40.0f};
 const HitRect BTN_EDIT_DATE = {80.0f, BOTTOM_ACTION_Y, 160.0f, 30.0f};
 
 /* Display & Power Sub-Menu Buttons */
-const HitRect BTN_DISP_BOTH_OFF = {40.0f, 72.0f, 240.0f, 48.0f};
-const HitRect BTN_DISP_BOT_OFF  = {40.0f, 136.0f, 240.0f, 48.0f};
+const HitRect BTN_DISP_BOTH_OFF = {40.0f, 48.0f, 240.0f, 40.0f};
+const HitRect BTN_DISP_BOT_OFF  = {40.0f, 96.0f, 240.0f, 40.0f};
+const HitRect BTN_DISP_AUTO_LEFT  = {40.0f, 168.0f, 36.0f, 32.0f};
+const HitRect BTN_DISP_AUTO_RIGHT = {244.0f, 168.0f, 36.0f, 32.0f};
 
 /* Modal buttons */
 const HitRect BTN_OK = {110.0f, 145.0f, 100.0f, 40.0f};
@@ -1551,13 +1563,25 @@ void ui_draw_settings_main(C2D_TextBuf buf) {
   draw_button(buf, &BTN_SET_BACK, "Back");
   draw_text_centered_x(buf, "Settings", 8.0f, 0.7f, 320.0f);
 
-  /* Main option buttons */
-  draw_button(buf, &BTN_SET_EDIT, "Edit Time & Date");
-  draw_button(buf, &BTN_SET_RESET, "Reset Time & Date");
+  /* Main option buttons (2 options) */
+  draw_button(buf, &BTN_SET_TIME_DATE, "Edit Time & Date");
   draw_button(buf, &BTN_SET_DISPLAY, "Display & Power");
 }
 
-void ui_draw_settings_display(C2D_TextBuf buf) {
+void ui_draw_settings_time_date_menu(C2D_TextBuf buf) {
+  /* Nav bar (y=0..36) */
+  C2D_DrawRectSolid(0.0f, 0.0f, 0.0f, 320.0f, 36.0f, CLR_TAB_INACT);
+  C2D_DrawRectSolid(0.0f, 35.0f, 0.0f, 320.0f, 1.0f, CLR_TAB_SEP);
+  draw_button(buf, &BTN_SET_BACK, "Back");
+  draw_text_centered_x(buf, "Edit Time & Date", 8.0f, 0.7f, 320.0f);
+
+  /* 3 options */
+  draw_button(buf, &BTN_SET_EDIT_TIME, "Edit Time");
+  draw_button(buf, &BTN_SET_EDIT_DATE_BTN, "Edit Date");
+  draw_button(buf, &BTN_SET_RESET, "Reset Time & Date");
+}
+
+void ui_draw_settings_display(C2D_TextBuf buf, u8 auto_sleep_idx) {
   /* Nav bar (y=0..36) */
   C2D_DrawRectSolid(0.0f, 0.0f, 0.0f, 320.0f, 36.0f, CLR_TAB_INACT);
   C2D_DrawRectSolid(0.0f, 35.0f, 0.0f, 320.0f, 1.0f, CLR_TAB_SEP);
@@ -1568,9 +1592,33 @@ void ui_draw_settings_display(C2D_TextBuf buf) {
   draw_button(buf, &BTN_DISP_BOTH_OFF, "Turn Off Both Screens");
   draw_button(buf, &BTN_DISP_BOT_OFF, "Turn Off Bottom Screen");
 
-  /* Helper hint text */
-  draw_text_centered_x(buf, "Wake: Tap screen or press D-Pad", 196.0f, 0.45f, 320.0f);
-  draw_text_centered_x(buf, "Shortcut: L + R turns off both screens", 212.0f, 0.45f, 320.0f);
+  /* Auto turn off display section */
+  draw_text_centered_x(buf, "Auto turn off display", 146.0f, 0.52f, 320.0f);
+
+  draw_stepper_arrow_button_horizontal(&BTN_DISP_AUTO_LEFT, true);
+  draw_stepper_arrow_button_horizontal(&BTN_DISP_AUTO_RIGHT, false);
+
+  /* Value box */
+  float box_x = 84.0f;
+  float box_y = 168.0f;
+  float box_w = 152.0f;
+  float box_h = 32.0f;
+  C2D_DrawRectSolid(box_x, box_y, 0.0f, box_w, box_h, C2D_Color32(0x22, 0x22, 0x22, 0xFF));
+  C2D_DrawRectSolid(box_x, box_y, 0.0f, box_w, 1.0f, C2D_Color32(0x38, 0x3C, 0x48, 0xFF));
+  C2D_DrawRectSolid(box_x, box_y + box_h - 1.0f, 0.0f, box_w, 1.0f, C2D_Color32(0x38, 0x3C, 0x48, 0xFF));
+  C2D_DrawRectSolid(box_x, box_y, 0.0f, 1.0f, box_h, C2D_Color32(0x38, 0x3C, 0x48, 0xFF));
+  C2D_DrawRectSolid(box_x + box_w - 1.0f, box_y, 0.0f, 1.0f, box_h, C2D_Color32(0x38, 0x3C, 0x48, 0xFF));
+
+  static const char *const s_auto_sleep_labels[8] = {
+    "Never", "1 min", "3 min", "5 min", "10 min", "20 min", "30 min", "60 min"
+  };
+  const char *lbl = (auto_sleep_idx < 8) ? s_auto_sleep_labels[auto_sleep_idx] : "Never";
+  C2D_Text txt;
+  C2D_TextParse(&txt, buf, lbl);
+  C2D_TextOptimize(&txt);
+  float tw, th;
+  C2D_TextGetDimensions(&txt, 0.58f, 0.58f, &tw, &th);
+  C2D_DrawText(&txt, C2D_WithColor, box_x + (box_w - tw) / 2.0f, box_y + (box_h - th) / 2.0f, 0.0f, 0.58f, 0.58f, CLR_TEXT);
 }
 
 void ui_draw_settings_edit_time(C2D_TextBuf buf, int h, int m, int s) {
@@ -1584,8 +1632,8 @@ void ui_draw_settings_edit_time(C2D_TextBuf buf, int h, int m, int s) {
   /* Time editor steppers */
   draw_time_editor(buf, h, m, s);
 
-  /* Navigate to Edit Date */
-  draw_button(buf, &BTN_EDIT_DATE, "Edit Date");
+  /* Reset Time button */
+  draw_button(buf, &BTN_RESET_TIME, "Reset Time");
 }
 
 void ui_draw_settings_edit_date(C2D_TextBuf buf, int y, int m, int d,
@@ -1672,6 +1720,21 @@ void ui_draw_modal_confirm(C2D_TextBuf buf) {
   draw_text_centered_x(buf, "system time & date?", 100.0f, 0.7f, 320.0f);
   draw_button(buf, &BTN_CANCEL, "Cancel");
   draw_button(buf, &BTN_CONFIRM, "Confirm");
+}
+
+void ui_draw_modal_confirm_reset_time(C2D_TextBuf buf) {
+  draw_modal_bg();
+  draw_text_centered_x(buf, "Reset clock to", 75.0f, 0.7f, 320.0f);
+  draw_text_centered_x(buf, "system time ONLY?", 100.0f, 0.7f, 320.0f);
+  draw_button(buf, &BTN_CANCEL, "Cancel");
+  draw_button(buf, &BTN_CONFIRM, "Confirm");
+}
+
+void ui_draw_modal_timer_zero(C2D_TextBuf buf) {
+  draw_modal_bg();
+  draw_text_centered_x(buf, "Please set a timer", 75.0f, 0.7f, 320.0f);
+  draw_text_centered_x(buf, "duration first!", 100.0f, 0.7f, 320.0f);
+  draw_button(buf, &BTN_OK, "OK");
 }
 
 void ui_draw_modal_success(C2D_TextBuf buf, const char *msg) {

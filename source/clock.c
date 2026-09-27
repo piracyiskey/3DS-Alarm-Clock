@@ -183,6 +183,17 @@ void clock_reset(SaveData* save)
     }
 }
 
+void clock_reset_time(SaveData* save)
+{
+    g_time_offset_s = 0;
+    g_has_offset    = (g_date_offset_days != 0);
+
+    if (save) {
+        save->time_offset_s = 0;
+        save_write(save);
+    }
+}
+
 bool clock_has_offset(void)
 {
     return g_has_offset;

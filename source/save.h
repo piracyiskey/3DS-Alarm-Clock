@@ -24,7 +24,8 @@ typedef struct SaveData {
     u8         alarm_count;                      /*    1 byte  — number of valid alarms (0..32) */
     u8         home_city_id;                     /*    1 byte  — home reference city ID */
     u8         world_city_count;                 /*    1 byte  — count of active world clock cities (0..32) */
-    u8         reserved_header[8];               /*    8 bytes — future header fields */
+    u8         auto_sleep_idx;                   /*    1 byte  — auto turn off display (0 = Never, 1..7 = 1m..60m) */
+    u8         reserved_header[7];               /*    7 bytes — future header fields */
     AlarmEntry alarms[MAX_ALARMS];               /* 1280 bytes — 32 × 40 bytes */
     u8         world_cities[MAX_WORLD_CITIES];   /*   32 bytes — 32 × 1 byte */
     u8         reserved_tail[16];                /*   16 bytes — future expansion */

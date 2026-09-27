@@ -215,6 +215,9 @@ bool save_read(SaveData* out)
         for (int i = 0; i < MAX_ALARMS; i++) {
             out->alarms[i].label[ALARM_LABEL_LEN - 1] = '\0';
         }
+        if (out->auto_sleep_idx >= 8) {
+            out->auto_sleep_idx = 0; /* Default to Never */
+        }
         if (out->alarm_count > 1) {
             alarm_sort(out);
         }

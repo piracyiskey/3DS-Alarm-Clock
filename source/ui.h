@@ -100,14 +100,20 @@ extern const HitRect ARROW_ALARM_M_UP,   ARROW_ALARM_M_DOWN;
 /* --- Settings overlay buttons --- */
 extern const HitRect BTN_SET_BACK;
 extern const HitRect BTN_SET_SAVE;
-extern const HitRect BTN_SET_EDIT;
-extern const HitRect BTN_SET_RESET;
+extern const HitRect BTN_SET_TIME_DATE;
 extern const HitRect BTN_SET_DISPLAY;
+extern const HitRect BTN_SET_EDIT_TIME;
+extern const HitRect BTN_SET_EDIT_DATE_BTN;
+extern const HitRect BTN_SET_RESET;
+extern const HitRect BTN_RESET_TIME;
+extern const HitRect BTN_SET_EDIT;
 extern const HitRect BTN_EDIT_DATE;
 
 /* --- Display & Power buttons --- */
 extern const HitRect BTN_DISP_BOTH_OFF;
 extern const HitRect BTN_DISP_BOT_OFF;
+extern const HitRect BTN_DISP_AUTO_LEFT;
+extern const HitRect BTN_DISP_AUTO_RIGHT;
 
 /* --- Modal buttons --- */
 extern const HitRect BTN_OK;
@@ -199,10 +205,13 @@ void ui_draw_timer_ringing_bottom(C2D_TextBuf buf, int h, int m, int s);
 
 /* Bottom screen — Settings overlay screens */
 void ui_draw_settings_main(C2D_TextBuf buf);
+void ui_draw_settings_time_date_menu(C2D_TextBuf buf);
 void ui_draw_settings_edit_time(C2D_TextBuf buf, int h, int m, int s);
 void ui_draw_settings_edit_date(C2D_TextBuf buf, int y, int m, int d, DateFormat fmt);
-void ui_draw_settings_display(C2D_TextBuf buf);
+void ui_draw_settings_display(C2D_TextBuf buf, u8 auto_sleep_idx);
 void ui_draw_modal_confirm(C2D_TextBuf buf);
+void ui_draw_modal_confirm_reset_time(C2D_TextBuf buf);
+void ui_draw_modal_timer_zero(C2D_TextBuf buf);
 void ui_draw_modal_success(C2D_TextBuf buf, const char* msg);
 
 /* First boot */

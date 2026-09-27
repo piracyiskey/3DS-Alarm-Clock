@@ -172,9 +172,11 @@ static void apt_hook_callback(APT_HookType hook, void* param) {
 /* Settings sub-states */
 typedef enum {
     SET_MAIN,
+    SET_TIME_DATE_MENU,
     SET_EDIT_TIME,
     SET_EDIT_DATE,
     SET_CONFIRM_RESET,
+    SET_CONFIRM_RESET_TIME,
     SET_SAVE_OK,
     SET_DISPLAY
 } SettingsSubState;
@@ -371,6 +373,19 @@ int main(int argc, char* argv[])
     int confirm_del_city_idx = -1;
     int confirm_home_city_id = -1;
 
+    static const s64 k_auto_sleep_seconds[8] = {
+        0,      /* Never */
+        60,     /* 1 min */
+        180,    /* 3 min */
+        300,    /* 5 min */
+        600,    /* 10 min */
+        1200,   /* 20 min */
+        1800,   /* 30 min */
+        3600    /* 60 min */
+    };
+    s64 s_last_user_activity_sec = get_display_time_seconds();
+    bool show_timer_zero_modal = false;
+
     HoldRepeat hr_time[6];      /* h↑ h↓ m↑ m↓ s↑ s↓ */
     HoldRepeat hr_date[6];      /* col1↑ col1↓ col2↑ col2↓ col3↑ col3↓ */
     HoldRepeat hr_alarm[4];     /* alarm h↑ h↓ m↑ m↓ */
@@ -450,10 +465,22 @@ int main(int argc, char* argv[])
             }
         }
 
+        /* Display Power Management: Track User Activity for Auto Turn Off */
+        s64 now_sec = get_display_time_seconds();
+        if ((kDown != 0) || tDown || tHeld) {
+            s_last_user_activity_sec = now_sec;
+        }
+
         /* Display Power Management: Automatic Alarm & Timer Preemption */
         if (alarm_sys.state == ALARM_STATE_RINGING || timer_ringing) {
             if (s_screen_mode != SCREEN_MODE_ALL_ON) {
                 set_screen_mode(SCREEN_MODE_ALL_ON);
+            }
+            s_last_user_activity_sec = now_sec; /* Reset countdown while ringing */
+        } else if (save.auto_sleep_idx > 0 && s_screen_mode != SCREEN_MODE_ALL_OFF) {
+            s64 timeout_s = k_auto_sleep_seconds[save.auto_sleep_idx < 8 ? save.auto_sleep_idx : 0];
+            if (timeout_s > 0 && (now_sec - s_last_user_activity_sec >= timeout_s)) {
+                set_screen_mode(SCREEN_MODE_ALL_OFF);
             }
         }
 
@@ -465,6 +492,7 @@ int main(int argc, char* argv[])
                 tDown = false;
                 tHeld = false;
                 kDown &= ~(KEY_TOUCH | KEY_DUP | KEY_DDOWN | KEY_DLEFT | KEY_DRIGHT);
+                s_last_user_activity_sec = now_sec;
             }
         }
 
@@ -524,18 +552,32 @@ int main(int argc, char* argv[])
                 if ((kDown & KEY_B) ||
                     (tDown && touch_hit(touch.px, touch.py, &BTN_SET_BACK))) {
                     is_settings = false;
-                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_EDIT)) {
+                } else if (tDown && (touch_hit(touch.px, touch.py, &BTN_SET_TIME_DATE) || touch_hit(touch.px, touch.py, &BTN_SET_EDIT))) {
+                    settings_sub = SET_TIME_DATE_MENU;
+                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_DISPLAY)) {
+                    settings_sub = SET_DISPLAY;
+                }
+                break;
+
+            case SET_TIME_DATE_MENU:
+                if ((kDown & KEY_B) ||
+                    (tDown && touch_hit(touch.px, touch.py, &BTN_SET_BACK))) {
+                    settings_sub = SET_MAIN;
+                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_EDIT_TIME)) {
+                    clock_get_hms(&edit_h, &edit_m, &edit_s);
+                    clock_get_ymd(&edit_y, &edit_mo, &edit_d);
+                    edit_fmt = (DateFormat)save.date_format;
+                    memset(hr_time, 0, sizeof(hr_time));
+                    settings_sub = SET_EDIT_TIME;
+                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_EDIT_DATE_BTN)) {
                     clock_get_hms(&edit_h, &edit_m, &edit_s);
                     clock_get_ymd(&edit_y, &edit_mo, &edit_d);
                     edit_fmt = (DateFormat)save.date_format;
                     ui_update_date_hitboxes(edit_fmt);
-                    memset(hr_time, 0, sizeof(hr_time));
                     memset(hr_date, 0, sizeof(hr_date));
-                    settings_sub = SET_EDIT_TIME;
+                    settings_sub = SET_EDIT_DATE;
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_RESET)) {
                     settings_sub = SET_CONFIRM_RESET;
-                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_DISPLAY)) {
-                    settings_sub = SET_DISPLAY;
                 }
                 break;
 
@@ -547,6 +589,13 @@ int main(int argc, char* argv[])
                     set_screen_mode(SCREEN_MODE_ALL_OFF);
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_DISP_BOT_OFF)) {
                     set_screen_mode(SCREEN_MODE_BOTTOM_OFF);
+                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_DISP_AUTO_LEFT)) {
+                    if (save.auto_sleep_idx == 0) save.auto_sleep_idx = 7;
+                    else save.auto_sleep_idx--;
+                    save_write(&save);
+                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_DISP_AUTO_RIGHT)) {
+                    save.auto_sleep_idx = (save.auto_sleep_idx + 1) % 8;
+                    save_write(&save);
                 }
                 break;
 
@@ -556,22 +605,31 @@ int main(int argc, char* argv[])
                     save_msg = "Reset to system time & date!";
                     settings_sub = SET_SAVE_OK;
                 } else if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_CANCEL))) {
-                    settings_sub = SET_MAIN;
+                    settings_sub = SET_TIME_DATE_MENU;
+                }
+                break;
+
+            case SET_CONFIRM_RESET_TIME:
+                if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_CONFIRM))) {
+                    clock_reset_time(&save);
+                    clock_get_hms(&edit_h, &edit_m, &edit_s);
+                    save_msg = "Time reset to system time!";
+                    settings_sub = SET_SAVE_OK;
+                } else if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_CANCEL))) {
+                    settings_sub = SET_EDIT_TIME;
                 }
                 break;
 
             case SET_EDIT_TIME:
                 if ((kDown & KEY_B) ||
                     (tDown && touch_hit(touch.px, touch.py, &BTN_SET_BACK))) {
-                    settings_sub = SET_MAIN;
+                    settings_sub = SET_TIME_DATE_MENU;
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_SAVE)) {
                     clock_apply_time_edit(edit_h, edit_m, edit_s, &save);
                     save_msg = "Time saved successfully!";
                     settings_sub = SET_SAVE_OK;
-                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_EDIT_DATE)) {
-                    memset(hr_date, 0, sizeof(hr_date));
-                    ui_update_date_hitboxes(edit_fmt);
-                    settings_sub = SET_EDIT_DATE;
+                } else if (tDown && (touch_hit(touch.px, touch.py, &BTN_RESET_TIME) || touch_hit(touch.px, touch.py, &BTN_EDIT_DATE))) {
+                    settings_sub = SET_CONFIRM_RESET_TIME;
                 } else {
                     hold_repeat_update(&hr_time[0], tHeld && touch_hit(touch.px, touch.py, &ARROW_H_UP));
                     hold_repeat_update(&hr_time[1], tHeld && touch_hit(touch.px, touch.py, &ARROW_H_DOWN));
@@ -592,7 +650,7 @@ int main(int argc, char* argv[])
             case SET_EDIT_DATE:
                 if ((kDown & KEY_B) ||
                     (tDown && touch_hit(touch.px, touch.py, &BTN_SET_BACK))) {
-                    settings_sub = SET_EDIT_TIME;
+                    settings_sub = SET_TIME_DATE_MENU;
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_SAVE)) {
                     save.date_format = (u8)edit_fmt;
                     clock_apply_date_edit(edit_y, edit_mo, edit_d, &save);
@@ -624,7 +682,7 @@ int main(int argc, char* argv[])
             case SET_SAVE_OK:
                 if ((kDown & (KEY_A | KEY_B)) ||
                     (tDown && touch_hit(touch.px, touch.py, &BTN_OK))) {
-                    settings_sub = SET_MAIN;
+                    settings_sub = SET_TIME_DATE_MENU;
                 }
                 break;
             }
@@ -655,7 +713,7 @@ int main(int argc, char* argv[])
                     save.alarms[edit_alarm_idx].enabled = true; // Auto-enable on edit
 
                     /* Guard against instant firing if scheduled time for today already passed */
-                    s64 now_sec = get_display_time_seconds();
+                    now_sec = get_display_time_seconds();
                     int y, m, d;
                     s64 now_days = now_sec / 86400;
                     if ((now_sec % 86400) < 0) now_days--;
@@ -733,6 +791,7 @@ int main(int argc, char* argv[])
             if (kDown & KEY_SELECT) {
                 is_settings  = true;
                 settings_sub = SET_MAIN;
+                show_timer_zero_modal = false;
                 nav_handled  = true;
             }
             /* Global Tab Navigation via Shoulder Buttons (L / R) with Circular Wrapping */
@@ -741,6 +800,7 @@ int main(int argc, char* argv[])
                 clock_view = CLOCK_VIEW_LIST;
                 confirm_del_city_idx = -1;
                 confirm_home_city_id = -1;
+                show_timer_zero_modal = false;
                 nav_handled = true;
             }
             else if ((kDown & KEY_R) && !(kHeld & KEY_L)) {
@@ -748,10 +808,12 @@ int main(int argc, char* argv[])
                 clock_view = CLOCK_VIEW_LIST;
                 confirm_del_city_idx = -1;
                 confirm_home_city_id = -1;
+                show_timer_zero_modal = false;
                 nav_handled = true;
             }
             /* Stylus Touch Navigation: Docked Tab Bar */
             else if (tDown && touch.py >= 200 && !(active_mode == MODE_CLOCK && clock_view == CLOCK_VIEW_PICKER)) {
+                show_timer_zero_modal = false;
                 if (touch_hit(touch.px, touch.py, &TAB_ALARM)) {
                     active_mode = MODE_ALARM;
                     clock_view = CLOCK_VIEW_LIST;
@@ -782,6 +844,7 @@ int main(int argc, char* argv[])
             else if (tDown && touch_hit(touch.px, touch.py, &BTN_SETTINGS_ICON) && !(active_mode == MODE_CLOCK && clock_view == CLOCK_VIEW_PICKER)) {
                 is_settings  = true;
                 settings_sub = SET_MAIN;
+                show_timer_zero_modal = false;
                 nav_handled  = true;
             }
 
@@ -1140,12 +1203,20 @@ int main(int argc, char* argv[])
                     break;
 
                 case MODE_TIMER:
-                    if (tmr.state == TMR_ADJUST || tmr.state == TMR_EXPIRED) {
+                    if (show_timer_zero_modal) {
+                        if ((kDown & (KEY_A | KEY_B)) || (tDown && touch_hit(touch.px, touch.py, &BTN_OK))) {
+                            show_timer_zero_modal = false;
+                        }
+                    } else if (tmr.state == TMR_ADJUST || tmr.state == TMR_EXPIRED) {
                         if (tmr.state == TMR_EXPIRED) {
                             tmr.state = TMR_ADJUST;
                         }
                         if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_TMR_START))) {
-                            timer_start(&tmr);
+                            if (tmr.target_h == 0 && tmr.target_m == 0 && tmr.target_s == 0) {
+                                show_timer_zero_modal = true;
+                            } else {
+                                timer_start(&tmr);
+                            }
                         } else {
                             hold_repeat_update(&hr_time[0], tHeld && touch_hit(touch.px, touch.py, &ARROW_H_UP));
                             hold_repeat_update(&hr_time[1], tHeld && touch_hit(touch.px, touch.py, &ARROW_H_DOWN));
@@ -1204,7 +1275,7 @@ int main(int argc, char* argv[])
             char date_str[64];
             format_date_string(date_str, sizeof(date_str), y, mo, d, (DateFormat)save.date_format);
 
-            s64 now_sec = get_display_time_seconds();
+            now_sec = get_display_time_seconds();
             s64 next_fire = -1;
             int next_idx = -1;
             for (int i = 0; i < save.alarm_count; i++) {
@@ -1286,6 +1357,9 @@ int main(int argc, char* argv[])
                 case SET_MAIN:
                     ui_draw_settings_main(textBuf);
                     break;
+                case SET_TIME_DATE_MENU:
+                    ui_draw_settings_time_date_menu(textBuf);
+                    break;
                 case SET_EDIT_TIME:
                     ui_draw_settings_edit_time(textBuf, edit_h, edit_m, edit_s);
                     break;
@@ -1293,15 +1367,19 @@ int main(int argc, char* argv[])
                     ui_draw_settings_edit_date(textBuf, edit_y, edit_mo, edit_d, edit_fmt);
                     break;
                 case SET_CONFIRM_RESET:
-                    ui_draw_settings_main(textBuf);
+                    ui_draw_settings_time_date_menu(textBuf);
                     ui_draw_modal_confirm(textBuf);
                     break;
+                case SET_CONFIRM_RESET_TIME:
+                    ui_draw_settings_edit_time(textBuf, edit_h, edit_m, edit_s);
+                    ui_draw_modal_confirm_reset_time(textBuf);
+                    break;
                 case SET_SAVE_OK:
-                    ui_draw_settings_main(textBuf);
+                    ui_draw_settings_time_date_menu(textBuf);
                     ui_draw_modal_success(textBuf, save_msg);
                     break;
                 case SET_DISPLAY:
-                    ui_draw_settings_display(textBuf);
+                    ui_draw_settings_display(textBuf, save.auto_sleep_idx);
                     break;
                 }
             } else if (alarm_view == STATE_ALARM_ADD || alarm_view == STATE_ALARM_EDIT) {
@@ -1355,6 +1433,10 @@ int main(int argc, char* argv[])
                         ui_draw_timer_running(textBuf);
                     else if (tmr.state == TMR_PAUSED)
                         ui_draw_timer_paused(textBuf);
+
+                    if (show_timer_zero_modal) {
+                        ui_draw_modal_timer_zero(textBuf);
+                    }
                     break;
                 }
 
