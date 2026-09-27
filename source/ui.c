@@ -167,8 +167,8 @@ static void draw_button(C2D_TextBuf buf, const HitRect *r, const char *label) {
   draw_button_scaled(buf, r, label, 0.65f, CLR_BTN);
 }
 
-/* Helper to set hardware scissor in landscape user coordinates (320x240) on the
- * tilted 240x320 bottom framebuffer */
+/* Helper to set hardware scissor in landscape user coordinates (320x240 or 400x240)
+ * on the tilted portrait framebuffer (240x320 or 240x400) */
 static void ui_set_scissor(GPU_SCISSORMODE mode, u32 x, u32 y, u32 w, u32 h) {
   C2D_Flush();
   if (mode == GPU_SCISSOR_DISABLE) {

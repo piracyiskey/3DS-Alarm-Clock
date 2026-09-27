@@ -172,8 +172,8 @@ static void alarm_check_missed(SaveData* save, AlarmSystem* sys, s64 prev, s64 n
         s64 expected = alarm_calc_next_fire_epoch(prev, alarm);
         if (expected != -1 && expected <= now) {
             if (now - expected <= 600) {
-                if (alarm->last_fired_epoch < expected) {
-                    alarm->last_fired_epoch = expected;
+                if (alarm->last_fired_epoch < (u64)expected) {
+                    alarm->last_fired_epoch = (u64)expected;
                     sys->ringing_mask |= (1U << i);
                     if (sys->state == ALARM_STATE_IDLE) {
                         sys->state = ALARM_STATE_RINGING;
@@ -231,8 +231,8 @@ void alarm_tick(SaveData* save, AlarmSystem* sys) {
         else if (alarm->repeat_mode == REPEAT_WEEKENDS && (dow == 0 || dow == 6)) valid_today = true;
         
         if (valid_today && now >= today_fire_epoch && now < today_fire_epoch + 60) {
-            if (alarm->last_fired_epoch < today_fire_epoch) {
-                alarm->last_fired_epoch = today_fire_epoch;
+            if (alarm->last_fired_epoch < (u64)today_fire_epoch) {
+                alarm->last_fired_epoch = (u64)today_fire_epoch;
                 sys->ringing_mask |= (1U << i);
                 printf("ALARM %d TRIGGERED!\n", i);
                 if (sys->state == ALARM_STATE_IDLE) {

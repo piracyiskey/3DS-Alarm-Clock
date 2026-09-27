@@ -2,8 +2,6 @@
 #include <3ds/types.h>
 #include <stdbool.h>
 
-#define MAX_WORLD_CITIES 32
-
 typedef enum {
     WORLD_DST_NONE = 0,
     WORLD_DST_USA,      /* North America (2nd Sun Mar -> 1st Sun Nov, +1h) */
