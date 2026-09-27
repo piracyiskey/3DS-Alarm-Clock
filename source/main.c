@@ -20,7 +20,7 @@
 extern const u8 icons_t3x[];
 extern const u8 icons_t3x_end[];
 #define icons_t3x_size     ((u32)(icons_t3x_end - icons_t3x))
-#define icons_settings_idx 0
+#include "icons.h"
 
 #define SOC_ALIGN      0x1000
 #define SOC_BUFFERSIZE 0x100000
@@ -301,8 +301,10 @@ int main(int argc, char* argv[])
     /* --- Sprite Sheet Init --- */
     C2D_SpriteSheet sprite_sheet = C2D_SpriteSheetLoadFromMem(icons_t3x, icons_t3x_size);
     C2D_Image settings_icon = { NULL, NULL };
+    C2D_Image trash_icon = { NULL, NULL };
     if (sprite_sheet) {
         settings_icon = C2D_SpriteSheetGetImage(sprite_sheet, icons_settings_idx);
+        trash_icon = C2D_SpriteSheetGetImage(sprite_sheet, icons_trash_2_idx);
     }
 
     audio_init();
@@ -880,19 +882,14 @@ int main(int argc, char* argv[])
                                     float y = start_y + i * 50.0f;
                                     if (y > 200.0f || y + 46.0f < 34.0f) continue;
 
-                                    float del_w = 26.0f;
-                                    float del_h = 26.0f;
-                                    float del_x = 300.0f - 10.0f - del_w;
-                                    float del_y = y + (46.0f - del_h) / 2.0f;
-
-                                    HitRect del_rect = { del_x - 4.0f, del_y - 2.0f, del_w + 8.0f, del_h + 4.0f };
+                                    HitRect del_rect = { 270.0f, y, 40.0f, 46.0f };
                                     if (touch_hit(touch.px, touch.py, &del_rect)) {
                                         world_clock_state.candidate_index = i;
                                         world_clock_state.candidate_is_delete = true;
                                         break;
                                     }
 
-                                    HitRect card_rect = { 10.0f, y, 300.0f - del_w - 14.0f, 46.0f };
+                                    HitRect card_rect = { 10.0f, y, 258.0f, 46.0f };
                                     if (touch_hit(touch.px, touch.py, &card_rect)) {
                                         world_clock_state.candidate_index = i;
                                         world_clock_state.candidate_is_delete = false;
@@ -1025,19 +1022,19 @@ int main(int argc, char* argv[])
                                 float y = start_y + i * 52.0f;
                                 if (y > 200.0f || y + 48.0f < 34.0f) continue;
                                 
-                                HitRect toggle_rect = { 266.0f, y, 44.0f, 48.0f };
-                                if (touch_hit(touch.px, touch.py, &toggle_rect)) {
-                                    alarm_list_state.candidate_index = i;
-                                    alarm_list_state.candidate_is_toggle = true;
-                                    alarm_list_state.candidate_is_delete = false;
-                                    break;
-                                }
-
-                                HitRect del_rect = { 230.0f, y, 36.0f, 48.0f };
+                                HitRect del_rect = { 270.0f, y, 40.0f, 48.0f };
                                 if (touch_hit(touch.px, touch.py, &del_rect)) {
                                     alarm_list_state.candidate_index = i;
                                     alarm_list_state.candidate_is_toggle = false;
                                     alarm_list_state.candidate_is_delete = true;
+                                    break;
+                                }
+
+                                HitRect toggle_rect = { 230.0f, y, 38.0f, 48.0f };
+                                if (touch_hit(touch.px, touch.py, &toggle_rect)) {
+                                    alarm_list_state.candidate_index = i;
+                                    alarm_list_state.candidate_is_toggle = true;
+                                    alarm_list_state.candidate_is_delete = false;
                                     break;
                                 }
                                 
@@ -1282,7 +1279,7 @@ int main(int argc, char* argv[])
                 /* Draw mode content */
                 switch (active_mode) {
                 case MODE_ALARM:
-                    ui_draw_alarm_list(textBuf, &save, &alarm_list_state, settings_icon);
+                    ui_draw_alarm_list(textBuf, &save, &alarm_list_state, settings_icon, trash_icon);
                     if (show_delete_confirm) {
                         ui_draw_alarm_delete_confirm(textBuf);
                     }
@@ -1292,7 +1289,7 @@ int main(int argc, char* argv[])
                     if (clock_view == CLOCK_VIEW_PICKER) {
                         ui_draw_city_picker(textBuf, &save, &city_picker_state);
                     } else {
-                        ui_draw_world_clock_list(textBuf, &save, &world_clock_state, settings_icon);
+                        ui_draw_world_clock_list(textBuf, &save, &world_clock_state, settings_icon, trash_icon);
                         if (confirm_del_city_idx >= 0 && confirm_del_city_idx < save.world_city_count) {
                             ui_draw_world_clock_delete_confirm(textBuf, save.world_cities[confirm_del_city_idx]);
                         } else if (confirm_home_city_id >= 0) {

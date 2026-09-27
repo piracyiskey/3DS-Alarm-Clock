@@ -3,6 +3,7 @@
 #include "clock.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 /* ------------------------------------------------------------------ */
 /*  Stepper layout metrics (shared by time & date editors)             */
@@ -596,7 +597,7 @@ void ui_draw_tab_bar(C2D_TextBuf buf, AppMode active) {
 /* ------------------------------------------------------------------ */
 
 void ui_draw_alarm_list(C2D_TextBuf buf, SaveData *save, AlarmListState *state,
-                        C2D_Image settings_icon) {
+                        C2D_Image settings_icon, C2D_Image trash_icon) {
   if (save->alarm_count == 0) {
     draw_text_centered_x(buf, "No alarms set", 95.0f, 0.65f, 320.0f);
     draw_text_centered_x(buf, "Tap [+] above to add an alarm", 125.0f, 0.50f, 320.0f);
@@ -658,9 +659,31 @@ void ui_draw_alarm_list(C2D_TextBuf buf, SaveData *save, AlarmListState *state,
       C2D_DrawText(&text, C2D_WithColor, 20.0f, y + 28.0f, 0.0f, 0.45f, 0.45f,
                    CLR_TEXT_DIM);
 
-      /* Toggle switch / checkbox area (right side) */
+      /* Delete [✕] / trash touch button (rightmost element on card: 10px padding to card right edge at 310.0f) */
+      float del_w = 24.0f;
+      float del_h = 24.0f;
+      float del_x = 300.0f - del_w;
+      float del_y = y + (card_h - del_h) / 2.0f;
+      C2D_DrawRectSolid(del_x, del_y, 0.0f, del_w, del_h, C2D_Color32(0x8A, 0x24, 0x24, 0xFF));
+
+      if (trash_icon.subtex) {
+        float icon_sz = 24.0f;
+        float scale = icon_sz / (float)trash_icon.subtex->width;
+        float icon_x = del_x + (del_w - icon_sz) / 2.0f;
+        float icon_y = del_y + (del_h - icon_sz) / 2.0f;
+        C2D_DrawImageAt(trash_icon, icon_x, icon_y, 0.0f, NULL, scale, scale);
+      } else {
+        C2D_Text txt_del;
+        C2D_TextParse(&txt_del, buf, "X");
+        C2D_TextOptimize(&txt_del);
+        float tw_del, th_del;
+        C2D_TextGetDimensions(&txt_del, 0.50f, 0.50f, &tw_del, &th_del);
+        C2D_DrawText(&txt_del, C2D_WithColor, del_x + (del_w - tw_del) / 2.0f, del_y + (del_h - th_del) / 2.0f, 0.0f, 0.50f, 0.50f, CLR_TEXT);
+      }
+
+      /* Toggle switch / checkbox area (left of delete button with generous spacing to avoid misclicks) */
       float box_size = 20.0f;
-      float box_x = 300.0f - 10.0f - box_size;
+      float box_x = del_x - 14.0f - box_size;
       float box_y = y + (card_h - box_size) / 2.0f;
 
       if (save->alarms[i].enabled) {
@@ -670,20 +693,6 @@ void ui_draw_alarm_list(C2D_TextBuf buf, SaveData *save, AlarmListState *state,
         C2D_DrawRectSolid(box_x, box_y, 0.0f, box_size, box_size,
                           C2D_Color32(0x20, 0x20, 0x20, 0xFF));
       }
-
-      /* Delete [✕] touch button (left of toggle switch) */
-      float del_w = 24.0f;
-      float del_h = 24.0f;
-      float del_x = box_x - 8.0f - del_w;
-      float del_y = y + (card_h - del_h) / 2.0f;
-      C2D_DrawRectSolid(del_x, del_y, 0.0f, del_w, del_h, C2D_Color32(0x8A, 0x24, 0x24, 0xFF));
-
-      C2D_Text txt_del;
-      C2D_TextParse(&txt_del, buf, "X");
-      C2D_TextOptimize(&txt_del);
-      float tw_del, th_del;
-      C2D_TextGetDimensions(&txt_del, 0.50f, 0.50f, &tw_del, &th_del);
-      C2D_DrawText(&txt_del, C2D_WithColor, del_x + (del_w - tw_del) / 2.0f, del_y + (del_h - th_del) / 2.0f, 0.0f, 0.50f, 0.50f, CLR_TEXT);
     }
 
     /* Disable hardware scissor immediately so header, tab bar, and buttons are
@@ -959,7 +968,8 @@ void ui_draw_clock_bottom(C2D_TextBuf buf) {
   draw_text_centered_x(buf, "World Clock", 85.0f, 0.75f, 320.0f);
 }
 
-void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListState* state, C2D_Image settings_icon) {
+void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListState* state,
+                              C2D_Image settings_icon, C2D_Image trash_icon) {
   if (save->world_city_count == 0) {
     draw_text_centered_x(buf, "No world cities added", 95.0f, 0.65f, 320.0f);
     draw_text_centered_x(buf, "Tap [+] above to add a city", 125.0f, 0.50f, 320.0f);
@@ -1019,38 +1029,49 @@ void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListSta
       C2D_TextOptimize(&txt);
       C2D_DrawText(&txt, C2D_WithColor, 20.0f, y + 27.0f, 0.0f, 0.45f, 0.45f, CLR_TEXT_DIM);
 
-      /* Right side: Delete [✕] touch button */
-      float del_w = 26.0f;
-      float del_h = 26.0f;
-      float del_x = 300.0f - 10.0f - del_w;
+      /* Right side: Delete touch button (trash icon) */
+      float del_w = 24.0f;
+      float del_h = 24.0f;
+      float del_x = 300.0f - del_w; /* 276.0f: right edge at 300.0f, exactly 10.0f padding to card right edge at 310.0f */
       float del_y = y + (card_h - del_h) / 2.0f;
       C2D_DrawRectSolid(del_x, del_y, 0.0f, del_w, del_h, C2D_Color32(0x8A, 0x24, 0x24, 0xFF));
 
-      C2D_TextParse(&txt, buf, "X");
-      C2D_TextOptimize(&txt);
-      float tw_x, th_x;
-      C2D_TextGetDimensions(&txt, 0.55f, 0.55f, &tw_x, &th_x);
-      C2D_DrawText(&txt, C2D_WithColor, del_x + (del_w - tw_x) / 2.0f, del_y + (del_h - th_x) / 2.0f, 0.0f, 0.55f, 0.55f, CLR_TEXT);
+      if (trash_icon.subtex) {
+        float icon_sz = 24.0f;
+        float scale = icon_sz / (float)trash_icon.subtex->width;
+        float icon_x = del_x + (del_w - icon_sz) / 2.0f;
+        float icon_y = del_y + (del_h - icon_sz) / 2.0f;
+        C2D_DrawImageAt(trash_icon, icon_x, icon_y, 0.0f, NULL, scale, scale);
+      } else {
+        C2D_Text txt_del;
+        C2D_TextParse(&txt_del, buf, "X");
+        C2D_TextOptimize(&txt_del);
+        float tw_x, th_x;
+        C2D_TextGetDimensions(&txt_del, 0.50f, 0.50f, &tw_x, &th_x);
+        C2D_DrawText(&txt_del, C2D_WithColor, del_x + (del_w - tw_x) / 2.0f, del_y + (del_h - th_x) / 2.0f, 0.0f, 0.50f, 0.50f, CLR_TEXT);
+      }
 
       /* Right side: Time string (e.g. "18:25") */
       char time_str[16];
       snprintf(time_str, sizeof(time_str), "%02d:%02d", th, tm);
-      C2D_TextParse(&txt, buf, time_str);
-      C2D_TextOptimize(&txt);
+      C2D_Text txt_time;
+      C2D_TextParse(&txt_time, buf, time_str);
+      C2D_TextOptimize(&txt_time);
       float tw_time, th_time;
-      C2D_TextGetDimensions(&txt, 0.80f, 0.80f, &tw_time, &th_time);
-      float time_x = del_x - 12.0f - tw_time;
-      C2D_DrawText(&txt, C2D_WithColor, time_x, y + 6.0f, 0.0f, 0.80f, 0.80f, CLR_TEXT);
+      C2D_TextGetDimensions(&txt_time, 0.80f, 0.80f, &tw_time, &th_time);
+      float time_x = floorf(del_x - 14.0f - tw_time);
+      C2D_DrawText(&txt_time, C2D_WithColor, time_x, y + 4.0f, 0.0f, 0.80f, 0.80f, CLR_TEXT);
 
       /* Day/Night indicator */
       bool is_day = world_clock_is_daytime(th);
       const char* dn_str = is_day ? "DAY" : "NIGHT";
       u32 dn_clr = is_day ? C2D_Color32(0xFF, 0xDA, 0x44, 0xFF) : C2D_Color32(0x80, 0xA0, 0xD0, 0xFF);
-      C2D_TextParse(&txt, buf, dn_str);
-      C2D_TextOptimize(&txt);
+      C2D_Text txt_dn;
+      C2D_TextParse(&txt_dn, buf, dn_str);
+      C2D_TextOptimize(&txt_dn);
       float tw_dn, th_dn;
-      C2D_TextGetDimensions(&txt, 0.40f, 0.40f, &tw_dn, &th_dn);
-      C2D_DrawText(&txt, C2D_WithColor, del_x - 12.0f - tw_dn, y + 28.0f, 0.0f, 0.40f, 0.40f, dn_clr);
+      C2D_TextGetDimensions(&txt_dn, 0.40f, 0.40f, &tw_dn, &th_dn);
+      C2D_DrawText(&txt_dn, C2D_WithColor, floorf(del_x - 14.0f - tw_dn), y + 28.0f, 0.0f, 0.40f, 0.40f, dn_clr);
     }
 
     ui_set_scissor(GPU_SCISSOR_DISABLE, 0, 0, 0, 0);
