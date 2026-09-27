@@ -1,5 +1,6 @@
 #include "save.h"
 #include "world_clock.h"
+#include "alarm.h"
 #include <3ds.h>
 #include <stdio.h>
 #include <string.h>
@@ -214,6 +215,9 @@ bool save_read(SaveData* out)
         for (int i = 0; i < MAX_ALARMS; i++) {
             out->alarms[i].label[ALARM_LABEL_LEN - 1] = '\0';
         }
+        if (out->alarm_count > 1) {
+            alarm_sort(out);
+        }
         return true;
     }
 
@@ -246,6 +250,10 @@ bool save_read(SaveData* out)
 
         for (int i = 0; i < 16; i++) {
             out->world_cities[i] = v3.world_cities[i];
+        }
+
+        if (out->alarm_count > 1) {
+            alarm_sort(out);
         }
 
         /* Write upgraded v4 save file immediately */

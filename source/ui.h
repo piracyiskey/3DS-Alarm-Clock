@@ -2,6 +2,7 @@
 #include <citro2d.h>
 #include <stdbool.h>
 #include "save.h"
+#include "stopwatch.h"
 
 /* Hit rectangle for touch input */
 typedef struct { float x, y, w, h; } HitRect;
@@ -56,9 +57,11 @@ extern const HitRect BTN_FMT_RIGHT;
 
 /* --- Stopwatch buttons --- */
 extern const HitRect BTN_SW_START;
+extern const HitRect BTN_SW_LAP;
 extern const HitRect BTN_SW_PAUSE;
 extern const HitRect BTN_SW_RESUME;
 extern const HitRect BTN_SW_RESET;
+extern const HitRect BTN_SW_RESET_PAUSED;
 
 /* --- Timer buttons --- */
 extern const HitRect BTN_TMR_START;
@@ -123,7 +126,7 @@ void ui_draw_top_status_bar(C2D_TextBuf buf, u8 wifi_bars, u8 battery_percent, b
 void ui_draw_top_clock_with_date(C2D_TextBuf buf, int h, int m, int s, const char* date_str);
 void ui_draw_top_clock_with_home(C2D_TextBuf buf, int h, int m, int s, const char* date_str, const char* home_city, const char* home_country);
 void ui_draw_top_clock_with_alarm_status(C2D_TextBuf buf, int h, int m, int s, const char* date_str, const char* alarm_status);
-void ui_draw_top_stopwatch(C2D_TextBuf buf, int hh, int mm, int ss, int cs, bool show_hours);
+void ui_draw_top_stopwatch(C2D_TextBuf buf, const Stopwatch* sw, int hh, int mm, int ss, int cs, bool show_hours);
 void ui_draw_top_timer(C2D_TextBuf buf, int hh, int mm, int ss);
 
 /* Bottom screen — Header & Navigation */

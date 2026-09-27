@@ -5,43 +5,84 @@
 #include <stdio.h>
 #include <string.h>
 
+void alarm_sort(SaveData* save) {
+    if (!save || save->alarm_count <= 1) return;
+
+    for (int i = 1; i < save->alarm_count; i++) {
+        AlarmEntry key = save->alarms[i];
+        u16 key_time = (u16)key.hour * 60 + key.minute;
+        int j = i - 1;
+        while (j >= 0 && ((u16)save->alarms[j].hour * 60 + save->alarms[j].minute) > key_time) {
+            save->alarms[j + 1] = save->alarms[j];
+            j--;
+        }
+        save->alarms[j + 1] = key;
+    }
+
+    for (int i = 0; i < MAX_ALARMS; i++) {
+        if (i < save->alarm_count) {
+            save->alarms[i].id = (u8)i;
+        } else {
+            save->alarms[i].id = ALARM_INVALID;
+        }
+    }
+}
+
 int alarm_add(SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id, const char* label) {
     if (!save) return -1;
     if (save->alarm_count >= MAX_ALARMS) return -1;
 
-    for (int i = 0; i < MAX_ALARMS; i++) {
-        if (save->alarms[i].id == ALARM_INVALID) {
-            save->alarms[i].id = (u8)i;
-            save->alarms[i].enabled = true;
-            save->alarms[i].hour = hour;
-            save->alarms[i].minute = minute;
-            save->alarms[i].repeat_mode = repeat_mode;
-            save->alarms[i].ringtone_id = ringtone_id;
-            if (label) {
-                snprintf(save->alarms[i].label, sizeof(save->alarms[i].label), "%s", label);
-            } else {
-                save->alarms[i].label[0] = '\0';
-            }
+    u16 new_time = (u16)hour * 60 + minute;
+    int insert_idx = save->alarm_count;
 
-            /* Guard against immediate triggering if scheduled time for today already passed */
-            s64 now = get_display_time_seconds();
-            int y, m, d;
-            s64 now_days = now / 86400;
-            if ((now % 86400) < 0) now_days--;
-            days_to_ymd(now_days, &y, &m, &d);
-            s64 today_fire = ymd_to_days(y, m, d) * 86400LL + hour * 3600LL + minute * 60LL;
-            if (today_fire <= now) {
-                save->alarms[i].last_fired_epoch = today_fire;
-            } else {
-                save->alarms[i].last_fired_epoch = today_fire - 86400LL;
-            }
-
-            save->alarm_count++;
-            save_write(save);
-            return i;
+    for (int i = 0; i < save->alarm_count; i++) {
+        u16 curr_time = (u16)save->alarms[i].hour * 60 + save->alarms[i].minute;
+        if (new_time < curr_time) {
+            insert_idx = i;
+            break;
         }
     }
-    return -1;
+
+    /* Shift elements right from insert_idx to make room */
+    for (int i = save->alarm_count; i > insert_idx; i--) {
+        save->alarms[i] = save->alarms[i - 1];
+    }
+
+    /* Guard against immediate triggering if scheduled time for today already passed */
+    s64 now = get_display_time_seconds();
+    int y, m, d;
+    s64 now_days = now / 86400;
+    if ((now % 86400) < 0) now_days--;
+    days_to_ymd(now_days, &y, &m, &d);
+    s64 today_fire = ymd_to_days(y, m, d) * 86400LL + hour * 3600LL + minute * 60LL;
+    s64 last_epoch = (today_fire <= now) ? today_fire : (today_fire - 86400LL);
+
+    save->alarms[insert_idx].id = (u8)insert_idx;
+    save->alarms[insert_idx].enabled = true;
+    save->alarms[insert_idx].hour = hour;
+    save->alarms[insert_idx].minute = minute;
+    save->alarms[insert_idx].repeat_mode = repeat_mode;
+    save->alarms[insert_idx].ringtone_id = ringtone_id;
+    save->alarms[insert_idx].last_fired_epoch = last_epoch;
+    if (label) {
+        snprintf(save->alarms[insert_idx].label, sizeof(save->alarms[insert_idx].label), "%s", label);
+    } else {
+        save->alarms[insert_idx].label[0] = '\0';
+    }
+
+    save->alarm_count++;
+
+    /* Update IDs to match positions */
+    for (int i = 0; i < MAX_ALARMS; i++) {
+        if (i < save->alarm_count) {
+            save->alarms[i].id = (u8)i;
+        } else {
+            save->alarms[i].id = ALARM_INVALID;
+        }
+    }
+
+    save_write(save);
+    return insert_idx;
 }
 
 void alarm_delete(SaveData* save, int index) {

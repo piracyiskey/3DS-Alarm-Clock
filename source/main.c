@@ -338,7 +338,7 @@ int main(int argc, char* argv[])
     SettingsSubState settings_sub = SET_MAIN;
     const char* save_msg = "Saved successfully!";
 
-    Stopwatch sw;
+    static Stopwatch sw;
     stopwatch_init(&sw);
 
     Timer tmr;
@@ -635,7 +635,11 @@ int main(int argc, char* argv[])
                 alarm_view = ALARM_VIEW_LIST;
             } else if (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_EDIT_SAVE)) {
                 if (is_new) {
-                    alarm_add(&save, edit_alarm_h, edit_alarm_m, edit_alarm_repeat, edit_alarm_tone, edit_alarm_label);
+                    int new_idx = alarm_add(&save, edit_alarm_h, edit_alarm_m, edit_alarm_repeat, edit_alarm_tone, edit_alarm_label);
+                    if (new_idx >= 0) {
+                        alarm_list_state.selected_index = new_idx;
+                        alarm_calc_viewport_scroll(&alarm_list_state.scroll_y, new_idx);
+                    }
                 } else if (edit_alarm_idx >= 0 && edit_alarm_idx < save.alarm_count) {
                     save.alarms[edit_alarm_idx].hour = edit_alarm_h;
                     save.alarms[edit_alarm_idx].minute = edit_alarm_m;
@@ -655,6 +659,17 @@ int main(int argc, char* argv[])
                         save.alarms[edit_alarm_idx].last_fired_epoch = today_fire;
                     } else {
                         save.alarms[edit_alarm_idx].last_fired_epoch = today_fire - 86400LL;
+                    }
+
+                    alarm_sort(&save);
+                    for (int i = 0; i < save.alarm_count; i++) {
+                        if (save.alarms[i].hour == edit_alarm_h &&
+                            save.alarms[i].minute == edit_alarm_m &&
+                            strncmp(save.alarms[i].label, edit_alarm_label, ALARM_LABEL_LEN) == 0) {
+                            alarm_list_state.selected_index = i;
+                            alarm_calc_viewport_scroll(&alarm_list_state.scroll_y, i);
+                            break;
+                        }
                     }
                     save_write(&save);
                 }
@@ -947,11 +962,22 @@ int main(int argc, char* argv[])
                             stopwatch_pause(&sw);
                         else if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_SW_RESET)))
                             stopwatch_reset(&sw);
+                        else if ((kDown & KEY_Y) || (tDown && touch_hit(touch.px, touch.py, &BTN_SW_LAP)))
+                            stopwatch_lap(&sw);
                     } else if (sw.state == SW_PAUSED) {
                         if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_SW_RESUME)))
                             stopwatch_resume(&sw);
-                        else if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_SW_RESET)))
+                        else if ((kDown & KEY_B) || (tDown && (touch_hit(touch.px, touch.py, &BTN_SW_RESET) || touch_hit(touch.px, touch.py, &BTN_SW_RESET_PAUSED))))
                             stopwatch_reset(&sw);
+                    }
+
+                    /* Scroll laps when present */
+                    if (sw.lap_count > 6) {
+                        if (hr_nav[0].triggered) {
+                            stopwatch_scroll(&sw, -1);
+                        } else if (hr_nav[1].triggered) {
+                            stopwatch_scroll(&sw, +1);
+                        }
                     }
                     break;
 
@@ -1214,7 +1240,7 @@ int main(int argc, char* argv[])
             int sh, sm, ss, sc;
             bool show_hours;
             stopwatch_get_display(&sw, &sh, &sm, &ss, &sc, &show_hours);
-            ui_draw_top_stopwatch(textBuf, sh, sm, ss, sc, show_hours);
+            ui_draw_top_stopwatch(textBuf, &sw, sh, sm, ss, sc, show_hours);
         } else if (active_mode == MODE_TIMER) {
             int th, tm, ts;
             timer_get_display(&tmr, &th, &tm, &ts);

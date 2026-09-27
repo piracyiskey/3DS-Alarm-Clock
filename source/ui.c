@@ -80,9 +80,11 @@ const HitRect BTN_FMT_RIGHT = {260.0f, BOTTOM_ACTION_Y, 40.0f, 30.0f};
 
 /* Stopwatch buttons */
 const HitRect BTN_SW_START = {90.0f, 75.0f, 140.0f, 50.0f};
-const HitRect BTN_SW_PAUSE = {30.0f, 75.0f, 120.0f, 50.0f};
+const HitRect BTN_SW_LAP = {16.0f, 75.0f, 88.0f, 50.0f};
+const HitRect BTN_SW_PAUSE = {116.0f, 75.0f, 88.0f, 50.0f};
+const HitRect BTN_SW_RESET = {216.0f, 75.0f, 88.0f, 50.0f};
 const HitRect BTN_SW_RESUME = {30.0f, 75.0f, 120.0f, 50.0f};
-const HitRect BTN_SW_RESET = {170.0f, 75.0f, 120.0f, 50.0f};
+const HitRect BTN_SW_RESET_PAUSED = {170.0f, 75.0f, 120.0f, 50.0f};
 
 /* Timer buttons */
 const HitRect BTN_TMR_START = {90.0f, 36.0f, 140.0f, 26.0f};
@@ -488,28 +490,133 @@ void ui_draw_top_clock_with_alarm_status(C2D_TextBuf buf, int h, int m, int s,
   }
 }
 
-void ui_draw_top_stopwatch(C2D_TextBuf buf, int hh, int mm, int ss, int cs,
+void ui_draw_top_stopwatch(C2D_TextBuf buf, const Stopwatch* sw, int hh, int mm, int ss, int cs,
                            bool show_hours) {
-  draw_text_centered_x(buf, "STOPWATCH", 40.0f, 0.55f, 400.0f);
+  if (!sw || sw->lap_count == 0) {
+    draw_text_centered_x(buf, "STOPWATCH", 40.0f, 0.55f, 400.0f);
 
-  char str[24];
-  if (show_hours) {
-    snprintf(str, sizeof(str), "%02d:%02d:%02d:%02d", hh, mm, ss, cs);
-  } else {
-    snprintf(str, sizeof(str), "%02d:%02d:%02d", mm, ss, cs);
+    char str[24];
+    if (show_hours) {
+      snprintf(str, sizeof(str), "%02d:%02d:%02d:%02d", hh, mm, ss, cs);
+    } else {
+      snprintf(str, sizeof(str), "%02d:%02d:%02d", mm, ss, cs);
+    }
+
+    C2D_Text text;
+    C2D_TextParse(&text, buf, str);
+    C2D_TextOptimize(&text);
+
+    float scale = 2.0f;
+    float tw, th;
+    C2D_TextGetDimensions(&text, scale, scale, &tw, &th);
+
+    float x = (400.0f - tw) / 2.0f;
+    float y = (240.0f - th) / 2.0f + 14.0f;
+    C2D_DrawText(&text, C2D_WithColor, x, y, 0.0f, scale, scale, CLR_TEXT);
+    return;
   }
 
-  C2D_Text text;
-  C2D_TextParse(&text, buf, str);
-  C2D_TextOptimize(&text);
+  /* --- Lap View (sw->lap_count > 0) --- */
+  /* Top compact running clock centered vertically in Y = 22..68 */
+  char clock_str[24];
+  if (show_hours) {
+    snprintf(clock_str, sizeof(clock_str), "%02d:%02d:%02d:%02d", hh, mm, ss, cs);
+  } else {
+    snprintf(clock_str, sizeof(clock_str), "%02d:%02d:%02d", mm, ss, cs);
+  }
 
-  float scale = 2.0f;
-  float tw, th;
-  C2D_TextGetDimensions(&text, scale, scale, &tw, &th);
+  C2D_Text top_clock;
+  C2D_TextParse(&top_clock, buf, clock_str);
+  C2D_TextOptimize(&top_clock);
+  float clk_scale = 1.20f;
+  float ctw, cth;
+  C2D_TextGetDimensions(&top_clock, clk_scale, clk_scale, &ctw, &cth);
+  float clk_x = (400.0f - ctw) / 2.0f;
+  C2D_DrawText(&top_clock, C2D_WithColor, clk_x, 32.0f, 0.0f, clk_scale, clk_scale, CLR_TEXT);
 
-  float x = (400.0f - tw) / 2.0f;
-  float y = (240.0f - th) / 2.0f + 14.0f;
-  C2D_DrawText(&text, C2D_WithColor, x, y, 0.0f, scale, scale, CLR_TEXT);
+  /* Column Headers Bar at Y = 68.0f .. 88.0f */
+  C2D_DrawRectSolid(0.0f, 68.0f, 0.0f, 400.0f, 20.0f, C2D_Color32(0x22, 0x22, 0x22, 0xFF));
+  C2D_DrawRectSolid(0.0f, 87.0f, 0.0f, 400.0f, 1.0f, C2D_Color32(0x38, 0x38, 0x38, 0xFF));
+
+  C2D_Text h_lap, h_split, h_total;
+  C2D_TextParse(&h_lap, buf, "LAP");
+  C2D_TextOptimize(&h_lap);
+  C2D_DrawText(&h_lap, C2D_WithColor, 24.0f, 71.0f, 0.0f, 0.45f, 0.45f, CLR_TEXT_DIM);
+
+  C2D_TextParse(&h_split, buf, "TIME");
+  C2D_TextOptimize(&h_split);
+  C2D_DrawText(&h_split, C2D_WithColor, 145.0f, 71.0f, 0.0f, 0.45f, 0.45f, CLR_TEXT_DIM);
+
+  C2D_TextParse(&h_total, buf, "TOTAL TIME");
+  C2D_TextOptimize(&h_total);
+  C2D_DrawText(&h_total, C2D_WithColor, 275.0f, 71.0f, 0.0f, 0.45f, 0.45f, CLR_TEXT_DIM);
+
+  /* Viewport: Y = 88 to 238 (150px). Row height = 24px -> exactly 6 rows */
+  ui_set_scissor(GPU_SCISSOR_NORMAL, 0, 88, 400, 150);
+
+  int visible_rows = 6;
+  for (int r = 0; r < visible_rows; r++) {
+    int idx = sw->scroll_row + r;
+    if (idx >= sw->lap_count) break;
+
+    float row_y = 88.0f + (float)r * 24.0f;
+
+    /* Subtle row divider */
+    C2D_DrawRectSolid(16.0f, row_y + 23.0f, 0.0f, 368.0f, 1.0f, C2D_Color32(0x28, 0x28, 0x28, 0xFF));
+
+    /* Lap number */
+    char lap_num_str[16];
+    snprintf(lap_num_str, sizeof(lap_num_str), "Lap %02d", idx + 1);
+    C2D_Text t_num;
+    C2D_TextParse(&t_num, buf, lap_num_str);
+    C2D_TextOptimize(&t_num);
+    C2D_DrawText(&t_num, C2D_WithColor, 24.0f, row_y + 3.0f, 0.0f, 0.48f, 0.48f, CLR_TEXT_DIM);
+
+    /* Split (lap duration) */
+    int l_hh, l_mm, l_ss, l_cs;
+    bool l_hours;
+    stopwatch_format_time(sw->laps[idx].lap_time_ms, &l_hh, &l_mm, &l_ss, &l_cs, &l_hours);
+
+    char split_str[24];
+    if (l_hours) {
+      snprintf(split_str, sizeof(split_str), "%02d:%02d:%02d.%02d", l_hh, l_mm, l_ss, l_cs);
+    } else {
+      snprintf(split_str, sizeof(split_str), "%02d:%02d.%02d", l_mm, l_ss, l_cs);
+    }
+    C2D_Text t_split;
+    C2D_TextParse(&t_split, buf, split_str);
+    C2D_TextOptimize(&t_split);
+    C2D_DrawText(&t_split, C2D_WithColor, 145.0f, row_y + 3.0f, 0.0f, 0.48f, 0.48f, CLR_TEXT);
+
+    /* Total time */
+    int t_hh, t_mm, t_ss, t_cs;
+    bool t_hours;
+    stopwatch_format_time(sw->laps[idx].total_time_ms, &t_hh, &t_mm, &t_ss, &t_cs, &t_hours);
+
+    char total_str[24];
+    if (t_hours) {
+      snprintf(total_str, sizeof(total_str), "%02d:%02d:%02d.%02d", t_hh, t_mm, t_ss, t_cs);
+    } else {
+      snprintf(total_str, sizeof(total_str), "%02d:%02d.%02d", t_mm, t_ss, t_cs);
+    }
+    C2D_Text t_total;
+    C2D_TextParse(&t_total, buf, total_str);
+    C2D_TextOptimize(&t_total);
+    C2D_DrawText(&t_total, C2D_WithColor, 275.0f, row_y + 3.0f, 0.0f, 0.48f, 0.48f, CLR_TEXT);
+  }
+
+  ui_set_scissor(GPU_SCISSOR_DISABLE, 0, 0, 0, 0);
+
+  /* Scroll indicator bar if more than 6 laps */
+  if (sw->lap_count > visible_rows) {
+    float track_y = 88.0f;
+    float track_h = 144.0f;
+    float max_scroll = (float)(sw->lap_count - visible_rows);
+    float thumb_h = ((float)visible_rows / (float)sw->lap_count) * track_h;
+    if (thumb_h < 12.0f) thumb_h = 12.0f;
+    float thumb_y = track_y + ((float)sw->scroll_row / max_scroll) * (track_h - thumb_h);
+    C2D_DrawRectSolid(393.0f, thumb_y, 0.0f, 3.0f, thumb_h, C2D_Color32(0x55, 0x55, 0x55, 0xFF));
+  }
 }
 
 void ui_draw_top_timer(C2D_TextBuf buf, int hh, int mm, int ss) {
@@ -1214,13 +1321,14 @@ void ui_draw_stopwatch_idle(C2D_TextBuf buf) {
 }
 
 void ui_draw_stopwatch_running(C2D_TextBuf buf) {
+  draw_button(buf, &BTN_SW_LAP, "Lap");
   draw_button(buf, &BTN_SW_PAUSE, "Pause");
   draw_button(buf, &BTN_SW_RESET, "Reset");
 }
 
 void ui_draw_stopwatch_paused(C2D_TextBuf buf) {
   draw_button(buf, &BTN_SW_RESUME, "Resume");
-  draw_button(buf, &BTN_SW_RESET, "Reset");
+  draw_button(buf, &BTN_SW_RESET_PAUSED, "Reset");
 }
 
 void ui_draw_timer_adjust(C2D_TextBuf buf, int h, int m, int s) {

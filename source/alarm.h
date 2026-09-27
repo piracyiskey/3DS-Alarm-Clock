@@ -54,6 +54,7 @@ struct SaveData;
 int  alarm_add(struct SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id, const char* label);
 void alarm_delete(struct SaveData* save, int index);
 void alarm_update(struct SaveData* save, int index);
+void alarm_sort(struct SaveData* save);
 
 void alarm_sys_init(AlarmSystem* sys);
 s64  alarm_calc_next_fire_epoch(s64 now_epoch, const AlarmEntry* alarm);
