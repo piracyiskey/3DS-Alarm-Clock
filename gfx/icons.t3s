@@ -1,3 +1,7 @@
 --atlas -f rgba8888 -z auto
 ../assets/icons/settings.png
 ../assets/icons/trash-2.png
+../assets/icons/alarm.png
+../assets/icons/clock.png
+../assets/icons/stopwatch.png
+../assets/icons/timer.png

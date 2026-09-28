@@ -304,9 +304,18 @@ int main(int argc, char* argv[])
     C2D_SpriteSheet sprite_sheet = C2D_SpriteSheetLoadFromMem(icons_t3x, icons_t3x_size);
     C2D_Image settings_icon = { NULL, NULL };
     C2D_Image trash_icon = { NULL, NULL };
+    C2D_Image tab_icons[4] = { { NULL, NULL } };
     if (sprite_sheet) {
         settings_icon = C2D_SpriteSheetGetImage(sprite_sheet, icons_settings_idx);
         trash_icon = C2D_SpriteSheetGetImage(sprite_sheet, icons_trash_2_idx);
+        tab_icons[MODE_ALARM]     = C2D_SpriteSheetGetImage(sprite_sheet, icons_alarm_idx);
+        tab_icons[MODE_CLOCK]     = C2D_SpriteSheetGetImage(sprite_sheet, icons_clock_idx);
+        tab_icons[MODE_STOPWATCH] = C2D_SpriteSheetGetImage(sprite_sheet, icons_stopwatch_idx);
+        tab_icons[MODE_TIMER]     = C2D_SpriteSheetGetImage(sprite_sheet, icons_timer_idx);
+
+        if (settings_icon.tex) {
+            C3D_TexSetFilter(settings_icon.tex, GPU_LINEAR, GPU_LINEAR);
+        }
     }
 
     audio_init();
@@ -1442,7 +1451,7 @@ int main(int argc, char* argv[])
 
                 /* Draw persistent tab bar */
                 if (!(active_mode == MODE_CLOCK && clock_view == CLOCK_VIEW_PICKER)) {
-                    ui_draw_tab_bar(textBuf, active_mode);
+                    ui_draw_tab_bar(textBuf, active_mode, tab_icons);
                 }
             }
         }

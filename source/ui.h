@@ -140,7 +140,7 @@ void ui_draw_top_timer(C2D_TextBuf buf, int hh, int mm, int ss);
 
 /* Bottom screen — Header & Navigation */
 void ui_draw_header(C2D_TextBuf buf, C2D_Image settings_icon, const char* title);
-void ui_draw_tab_bar(C2D_TextBuf buf, AppMode active);
+void ui_draw_tab_bar(C2D_TextBuf buf, AppMode active, const C2D_Image tab_icons[4]);
 
 /* Bottom screen — Tab modes */
 typedef struct {

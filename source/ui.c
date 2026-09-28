@@ -836,18 +836,23 @@ void ui_draw_header(C2D_TextBuf buf, C2D_Image settings_icon,
   }
 }
 
-void ui_draw_tab_bar(C2D_TextBuf buf, AppMode active) {
+/* Per-tab icon micro-adjustments: [Alarm, Clock, Stopwatch, Timer] */
+static const float s_tab_icon_sizes[4]    = { 28.0f,  28.0f,  28.0f,  28.0f }; /* Width & Height in px */
+static const float s_tab_icon_offset_x[4] = {  0.0f,   0.0f,   0.0f,   0.0f }; /* +right / -left (px)  */
+static const float s_tab_icon_offset_y[4] = {  0.0f,   0.0f,   0.0f,   0.0f }; /* +down  / -up   (px)  */
+
+void ui_draw_tab_bar(C2D_TextBuf buf, AppMode active, const C2D_Image tab_icons[4]) {
   /* Top border line */
   C2D_DrawRectSolid(0.0f, 199.0f, 0.0f, 320.0f, 1.0f, CLR_TAB_SEP);
 
   static const HitRect *tabs[4] = {&TAB_ALARM, &TAB_CLOCK, &TAB_STOPWATCH,
                                    &TAB_TIMER};
-  static const char *labels[4] = {"Alarm", "Clock", "SW", "Timer"};
+  static const char *fallback_labels[4] = {"Alarm", "Clock", "SW", "Timer"};
 
   for (int i = 0; i < 4; i++) {
     const HitRect *r = tabs[i];
-    u32 bg_clr = (i == (int)active) ? CLR_TAB_ACTIVE : CLR_TAB_INACT;
-    u32 tx_clr = (i == (int)active) ? CLR_TEXT : CLR_TEXT_DIM;
+    bool is_active = (i == (int)active);
+    u32 bg_clr = is_active ? CLR_TAB_ACTIVE : CLR_TAB_INACT;
 
     C2D_DrawRectSolid(r->x, r->y, 0.0f, r->w, r->h, bg_clr);
 
@@ -855,16 +860,37 @@ void ui_draw_tab_bar(C2D_TextBuf buf, AppMode active) {
     if (i > 0)
       C2D_DrawRectSolid(r->x, r->y, 0.0f, 1.0f, r->h, CLR_TAB_SEP);
 
-    C2D_Text text;
-    C2D_TextParse(&text, buf, labels[i]);
-    C2D_TextOptimize(&text);
+    if (tab_icons && tab_icons[i].subtex) {
+      float icon_w = s_tab_icon_sizes[i];
+      float icon_h = s_tab_icon_sizes[i];
+      float scale_x = icon_w / (float)tab_icons[i].subtex->width;
+      float scale_y = icon_h / (float)tab_icons[i].subtex->height;
+      float icon_x = r->x + (r->w - icon_w) / 2.0f + s_tab_icon_offset_x[i];
+      float icon_y = r->y + (r->h - icon_h) / 2.0f + s_tab_icon_offset_y[i];
 
-    float tw, th;
-    C2D_TextGetDimensions(&text, 0.65f, 0.65f, &tw, &th);
+      if (is_active) {
+        /* Full brightness crisp white */
+        C2D_DrawImageAt(tab_icons[i], icon_x, icon_y, 0.0f, NULL, scale_x, scale_y);
+      } else {
+        /* Dimmed neutral gray for inactive tabs */
+        C2D_ImageTint tint;
+        C2D_PlainImageTint(&tint, CLR_TEXT_DIM, 1.0f);
+        C2D_DrawImageAt(tab_icons[i], icon_x, icon_y, 0.0f, &tint, scale_x, scale_y);
+      }
+    } else {
+      /* Fallback text if sprites unavailable */
+      u32 tx_clr = is_active ? CLR_TEXT : CLR_TEXT_DIM;
+      C2D_Text text;
+      C2D_TextParse(&text, buf, fallback_labels[i]);
+      C2D_TextOptimize(&text);
 
-    float tx = r->x + (r->w - tw) / 2.0f;
-    float ty = r->y + (r->h - th) / 2.0f;
-    C2D_DrawText(&text, C2D_WithColor, tx, ty, 0.0f, 0.65f, 0.65f, tx_clr);
+      float tw, th;
+      C2D_TextGetDimensions(&text, 0.65f, 0.65f, &tw, &th);
+
+      float tx = r->x + (r->w - tw) / 2.0f;
+      float ty = r->y + (r->h - th) / 2.0f;
+      C2D_DrawText(&text, C2D_WithColor, tx, ty, 0.0f, 0.65f, 0.65f, tx_clr);
+    }
   }
 }
 
