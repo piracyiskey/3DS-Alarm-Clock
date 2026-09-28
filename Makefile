@@ -40,8 +40,8 @@ GRAPHICS	:=	gfx
 GFXBUILD	:=	$(BUILD)
 
 APP_TITLE	:=	3DS Clock
-APP_DESCRIPTION	:=	Dual-screen clock with custom time offsets
-APP_AUTHOR	:=	Homebrew Developer
+APP_DESCRIPTION	:=	Dual-screen 3DS Clock & Alarms v1.0.0
+APP_AUTHOR	:=	Nguyễn Mạnh Dũng
 
 #---------------------------------------------------------------------------------
 # options for code generation

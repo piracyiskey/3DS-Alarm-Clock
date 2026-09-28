@@ -180,7 +180,8 @@ typedef enum {
     SET_CONFIRM_RESET_TIME,
     SET_SAVE_OK,
     SET_DISPLAY,
-    SET_MANUAL
+    SET_MANUAL,
+    SET_ABOUT
 } SettingsSubState;
 
 #define TOUCH_SLOP_PX 8.0f
@@ -578,6 +579,8 @@ int main(int argc, char* argv[])
                     manual_topic_idx = 0;
                     manual_scroll_y = 0.0f;
                     manual_is_dragging = false;
+                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_ABOUT)) {
+                    settings_sub = SET_ABOUT;
                 }
                 break;
 
@@ -741,6 +744,12 @@ int main(int argc, char* argv[])
                     } else if (!tHeld) {
                         manual_is_dragging = false;
                     }
+                }
+                break;
+
+            case SET_ABOUT:
+                if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_SET_BACK))) {
+                    settings_sub = SET_MAIN;
                 }
                 break;
             }
@@ -1458,6 +1467,9 @@ int main(int argc, char* argv[])
                     break;
                 case SET_MANUAL:
                     manual_draw_bottom(textBuf, manual_topic_idx, manual_scroll_y);
+                    break;
+                case SET_ABOUT:
+                    ui_draw_settings_about(textBuf);
                     break;
                 }
             } else if (alarm_view == STATE_ALARM_ADD || alarm_view == STATE_ALARM_EDIT) {

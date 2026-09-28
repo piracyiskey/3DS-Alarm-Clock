@@ -124,8 +124,9 @@ const HitRect ARROW_ALARM_M_DOWN = { 168.0f,  98.0f, 56.0f, 24.0f };
 const HitRect BTN_SET_BACK = {10.0f, 4.0f, 70.0f, 28.0f};
 const HitRect BTN_SET_MANUAL = {240.0f, 4.0f, 70.0f, 28.0f};
 const HitRect BTN_SET_SAVE = {240.0f, 4.0f, 70.0f, 28.0f};
-const HitRect BTN_SET_TIME_DATE = {40.0f, 72.0f, 240.0f, 48.0f};
-const HitRect BTN_SET_DISPLAY = {40.0f, 136.0f, 240.0f, 48.0f};
+const HitRect BTN_SET_TIME_DATE = {40.0f, 56.0f, 240.0f, 40.0f};
+const HitRect BTN_SET_DISPLAY = {40.0f, 112.0f, 240.0f, 40.0f};
+const HitRect BTN_SET_ABOUT = {40.0f, 168.0f, 240.0f, 40.0f};
 
 /* Sub-menu "Edit Time & Date" buttons */
 const HitRect BTN_SET_EDIT_TIME = {40.0f, 56.0f, 240.0f, 40.0f};
@@ -1606,9 +1607,10 @@ void ui_draw_settings_main(C2D_TextBuf buf) {
   draw_text_centered_x(buf, "Settings", 8.0f, 0.7f, 320.0f);
   draw_button(buf, &BTN_SET_MANUAL, "Manual");
 
-  /* Main option buttons (2 options) */
+  /* Main option buttons (3 options) */
   draw_button(buf, &BTN_SET_TIME_DATE, "Edit Time & Date");
   draw_button(buf, &BTN_SET_DISPLAY, "Display & Power");
+  draw_button(buf, &BTN_SET_ABOUT, "About & Credits");
 }
 
 void ui_draw_settings_time_date_menu(C2D_TextBuf buf) {
@@ -1662,6 +1664,69 @@ void ui_draw_settings_display(C2D_TextBuf buf, u8 auto_sleep_idx) {
   float tw, th;
   C2D_TextGetDimensions(&txt, 0.58f, 0.58f, &tw, &th);
   C2D_DrawText(&txt, C2D_WithColor, box_x + (box_w - tw) / 2.0f, box_y + (box_h - th) / 2.0f, 0.0f, 0.58f, 0.58f, CLR_TEXT);
+}
+
+static void draw_about_box(float x, float y, float w, float h, u32 bg, u32 border) {
+  C2D_DrawRectSolid(x, y, 0.0f, w, h, bg);
+  C2D_DrawRectSolid(x, y, 0.0f, w, 1.0f, border);
+  C2D_DrawRectSolid(x, y + h - 1.0f, 0.0f, w, 1.0f, border);
+  C2D_DrawRectSolid(x, y, 0.0f, 1.0f, h, border);
+  C2D_DrawRectSolid(x + w - 1.0f, y, 0.0f, 1.0f, h, border);
+}
+
+static void draw_about_line(C2D_TextBuf buf, const char* str, float x, float y, float scale, u32 color) {
+  C2D_Text txt;
+  C2D_TextParse(&txt, buf, str);
+  C2D_TextOptimize(&txt);
+  C2D_DrawText(&txt, C2D_WithColor, x, y, 0.0f, scale, scale, color);
+}
+
+static void draw_about_centered(C2D_TextBuf buf, const char* str, float y, float scale, float screen_w, u32 color) {
+  C2D_Text txt;
+  C2D_TextParse(&txt, buf, str);
+  C2D_TextOptimize(&txt);
+  float tw, th;
+  C2D_TextGetDimensions(&txt, scale, scale, &tw, &th);
+  float x = (screen_w - tw) / 2.0f;
+  C2D_DrawText(&txt, C2D_WithColor, x, y, 0.0f, scale, scale, color);
+}
+
+void ui_draw_settings_about(C2D_TextBuf buf) {
+  /* Nav bar (y=0..36) */
+  C2D_DrawRectSolid(0.0f, 0.0f, 0.0f, 320.0f, 36.0f, CLR_TAB_INACT);
+  C2D_DrawRectSolid(0.0f, 35.0f, 0.0f, 320.0f, 1.0f, CLR_TAB_SEP);
+  draw_button(buf, &BTN_SET_BACK, "Back");
+  draw_text_centered_x(buf, "About & Credits", 8.0f, 0.7f, 320.0f);
+
+  const u32 card_bg     = C2D_Color32(0x18, 0x1C, 0x24, 0xFF);
+  const u32 card_border = C2D_Color32(0x2E, 0x34, 0x40, 0xFF);
+  const u32 clr_bright  = C2D_Color32(0xFF, 0xFF, 0xFF, 0xFF);
+  const u32 clr_body    = C2D_Color32(0xDD, 0xDD, 0xDD, 0xFF);
+  const u32 clr_dim     = C2D_Color32(0x88, 0x99, 0xA6, 0xFF);
+  const u32 clr_blue    = C2D_Color32(0x61, 0xAF, 0xEF, 0xFF);
+  const u32 clr_gold    = C2D_Color32(0xE5, 0xC0, 0x7B, 0xFF);
+
+  /* Card 1: Application & Developer */
+  draw_about_box(12.0f, 40.0f, 296.0f, 54.0f, card_bg, card_border);
+  draw_about_line(buf, "3DS Alarm Clock  v1.0.0", 20.0f, 43.0f, 0.44f, clr_bright);
+  draw_about_line(buf, "Developed by Nguyễn Mạnh Dũng", 20.0f, 56.0f, 0.36f, clr_body);
+  draw_about_line(buf, "GitHub: piracyiskey/3DS-Alarm-Clock", 20.0f, 68.0f, 0.34f, clr_dim);
+  draw_about_line(buf, "Contact: cheesemcrib2004@gmail.com", 20.0f, 80.0f, 0.34f, clr_dim);
+
+  /* Card 2: Assets & Attribution */
+  draw_about_box(12.0f, 99.0f, 296.0f, 38.0f, card_bg, card_border);
+  draw_about_line(buf, "Audio & Ringtones: Pixabay (Royalty-free)", 20.0f, 102.0f, 0.35f, clr_body);
+  draw_about_line(buf, "Icons: Icons8 (icons8.com)", 20.0f, 113.0f, 0.35f, clr_body);
+  draw_about_line(buf, "Powered by devkitPro & libctru", 20.0f, 124.0f, 0.32f, clr_dim);
+
+  /* Card 3: Special Thanks */
+  draw_about_box(12.0f, 142.0f, 296.0f, 48.0f, card_bg, card_border);
+  draw_about_line(buf, "─── Special Thanks ───────────────────", 20.0f, 145.0f, 0.34f, clr_blue);
+  draw_about_line(buf, "* Nintendo 3DS Homebrew Community", 20.0f, 159.0f, 0.35f, clr_bright);
+  draw_about_line(buf, "* Luma3DS Team", 20.0f, 172.0f, 0.35f, clr_bright);
+
+  /* Footer Appreciation */
+  draw_about_centered(buf, "Thank you for downloading and using 3DS Clock!", 202.0f, 0.38f, 320.0f, clr_gold);
 }
 
 void ui_draw_settings_edit_time(C2D_TextBuf buf, int h, int m, int s) {
