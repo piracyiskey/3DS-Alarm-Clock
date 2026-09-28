@@ -9,6 +9,10 @@ build/
 *.o
 *.d
 *.bin
+*.lst
+
+# Local assets
+assets/
 
 # AI agent instructions & rules
 .agents/
