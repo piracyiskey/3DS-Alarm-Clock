@@ -25,8 +25,6 @@ extern const u8 timer_bin[];
 extern const u8 timer_bin_end[];
 extern const u8 digital_clock_bin[];
 extern const u8 digital_clock_bin_end[];
-extern const u8 jazz_cafe_bin[];
-extern const u8 jazz_cafe_bin_end[];
 extern const u8 xmas_bin[];
 extern const u8 xmas_bin_end[];
 
@@ -220,18 +218,7 @@ void audio_scan_sd_ringtones(void) {
     ringtones[ringtone_count].sd_path[0] = '\0';
     ringtone_count++;
 
-    /* Slot 3: Jazz Cafe (Embedded PCM16) */
-    strncpy(ringtones[ringtone_count].name, "Jazz Cafe", 31);
-    ringtones[ringtone_count].name[31] = '\0';
-    ringtones[ringtone_count].source = RINGTONE_SRC_BUILTIN;
-    ringtones[ringtone_count].pcm_data = jazz_cafe_bin;
-    ringtones[ringtone_count].pcm_size = (u32)(jazz_cafe_bin_end - jazz_cafe_bin);
-    ringtones[ringtone_count].sample_rate = 22050;
-    ringtones[ringtone_count].channels = 2;
-    ringtones[ringtone_count].sd_path[0] = '\0';
-    ringtone_count++;
-
-    /* Slot 4: Christmas (Embedded PCM16) */
+    /* Slot 3: Christmas (Embedded PCM16) */
     strncpy(ringtones[ringtone_count].name, "Christmas", 31);
     ringtones[ringtone_count].name[31] = '\0';
     ringtones[ringtone_count].source = RINGTONE_SRC_BUILTIN;
@@ -242,7 +229,7 @@ void audio_scan_sd_ringtones(void) {
     ringtones[ringtone_count].sd_path[0] = '\0';
     ringtone_count++;
 
-    /* Slot 5..20: User SD Card MP3 Ringtones */
+    /* Slot 4..19: User SD Card MP3 Ringtones */
     DIR* dir = opendir("sdmc:/3ds/3ds-clock/ringtones");
     if (dir) {
         struct dirent* ent;

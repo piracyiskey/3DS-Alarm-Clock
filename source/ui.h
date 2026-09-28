@@ -219,7 +219,6 @@ void ui_draw_settings_time_date_menu(C2D_TextBuf buf);
 void ui_draw_settings_edit_time(C2D_TextBuf buf, int h, int m, int s);
 void ui_draw_settings_edit_date(C2D_TextBuf buf, int y, int m, int d, DateFormat fmt);
 void ui_draw_settings_display(C2D_TextBuf buf, u8 auto_sleep_idx);
-void ui_draw_settings_about(C2D_TextBuf buf);
 void ui_draw_modal_confirm(C2D_TextBuf buf);
 void ui_draw_modal_confirm_reset_time(C2D_TextBuf buf);
 void ui_draw_modal_timer_zero(C2D_TextBuf buf);

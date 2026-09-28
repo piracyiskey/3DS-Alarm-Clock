@@ -17,6 +17,7 @@
 #include "audio.h"
 #include "world_clock.h"
 #include "manual.h"
+#include "about.h"
 /* Binary assets generated from gfx/icons.t3s */
 extern const u8 icons_t3x[];
 extern const u8 icons_t3x_end[];
@@ -391,6 +392,10 @@ int main(int argc, char* argv[])
     bool  manual_is_dragging = false;
     float manual_touch_start_y = 0.0f;
 
+    float about_scroll_y = 0.0f;
+    bool  about_is_dragging = false;
+    float about_touch_start_y = 0.0f;
+
     static const s64 k_auto_sleep_seconds[8] = {
         0,      /* Never */
         60,     /* 1 min */
@@ -581,6 +586,8 @@ int main(int argc, char* argv[])
                     manual_is_dragging = false;
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_ABOUT)) {
                     settings_sub = SET_ABOUT;
+                    about_scroll_y = 0.0f;
+                    about_is_dragging = false;
                 }
                 break;
 
@@ -750,6 +757,28 @@ int main(int argc, char* argv[])
             case SET_ABOUT:
                 if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_SET_BACK))) {
                     settings_sub = SET_MAIN;
+                } else {
+                    float max_s = about_get_max_scroll();
+                    if ((kHeld & KEY_DUP) || (kHeld & KEY_CPAD_UP)) {
+                        about_scroll_y -= 12.0f;
+                        if (about_scroll_y < 0.0f) about_scroll_y = 0.0f;
+                    } else if ((kHeld & KEY_DDOWN) || (kHeld & KEY_CPAD_DOWN)) {
+                        about_scroll_y += 12.0f;
+                        if (about_scroll_y > max_s) about_scroll_y = max_s;
+                    }
+
+                    if (tDown && touch.py >= 36 && touch.py <= 240) {
+                        about_touch_start_y = touch.py;
+                        about_is_dragging = true;
+                    } else if (tHeld && about_is_dragging) {
+                        float dy = touch.py - about_touch_start_y;
+                        about_scroll_y -= dy;
+                        about_touch_start_y = touch.py;
+                        if (about_scroll_y < 0.0f) about_scroll_y = 0.0f;
+                        if (about_scroll_y > max_s) about_scroll_y = max_s;
+                    } else if (!tHeld) {
+                        about_is_dragging = false;
+                    }
                 }
                 break;
             }
@@ -1469,7 +1498,7 @@ int main(int argc, char* argv[])
                     manual_draw_bottom(textBuf, manual_topic_idx, manual_scroll_y);
                     break;
                 case SET_ABOUT:
-                    ui_draw_settings_about(textBuf);
+                    about_draw_bottom(textBuf, about_scroll_y);
                     break;
                 }
             } else if (alarm_view == STATE_ALARM_ADD || alarm_view == STATE_ALARM_EDIT) {

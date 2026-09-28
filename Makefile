@@ -41,7 +41,7 @@ GFXBUILD	:=	$(BUILD)
 
 APP_TITLE	:=	3DS Clock
 APP_DESCRIPTION	:=	Dual-screen 3DS Clock & Alarms v1.0.0
-APP_AUTHOR	:=	Nguyễn Mạnh Dũng
+APP_AUTHOR	:=	Nguyen Manh Dung
 
 #---------------------------------------------------------------------------------
 # options for code generation
