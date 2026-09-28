@@ -16,6 +16,7 @@
 #include "alarm.h"
 #include "audio.h"
 #include "world_clock.h"
+#include "manual.h"
 /* Binary assets generated from gfx/icons.t3s */
 extern const u8 icons_t3x[];
 extern const u8 icons_t3x_end[];
@@ -178,7 +179,8 @@ typedef enum {
     SET_CONFIRM_RESET,
     SET_CONFIRM_RESET_TIME,
     SET_SAVE_OK,
-    SET_DISPLAY
+    SET_DISPLAY,
+    SET_MANUAL
 } SettingsSubState;
 
 #define TOUCH_SLOP_PX 8.0f
@@ -381,6 +383,12 @@ int main(int argc, char* argv[])
     CityPickerState city_picker_state = {0.0f, 0.0f, 0.0f, false, false, -1, 0};
     int confirm_del_city_idx = -1;
     int confirm_home_city_id = -1;
+    int alert_home_city_id   = -1;
+
+    int   manual_topic_idx = 0;
+    float manual_scroll_y  = 0.0f;
+    bool  manual_is_dragging = false;
+    float manual_touch_start_y = 0.0f;
 
     static const s64 k_auto_sleep_seconds[8] = {
         0,      /* Never */
@@ -565,6 +573,11 @@ int main(int argc, char* argv[])
                     settings_sub = SET_TIME_DATE_MENU;
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_DISPLAY)) {
                     settings_sub = SET_DISPLAY;
+                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_MANUAL)) {
+                    settings_sub = SET_MANUAL;
+                    manual_topic_idx = 0;
+                    manual_scroll_y = 0.0f;
+                    manual_is_dragging = false;
                 }
                 break;
 
@@ -694,6 +707,42 @@ int main(int argc, char* argv[])
                     settings_sub = SET_TIME_DATE_MENU;
                 }
                 break;
+
+            case SET_MANUAL:
+                if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_MANUAL_BACK))) {
+                    settings_sub = SET_MAIN;
+                } else if ((kDown & KEY_L) || (tDown && touch_hit(touch.px, touch.py, &BTN_MANUAL_PREV))) {
+                    manual_topic_idx = (manual_topic_idx == 0) ? 1 : 0;
+                    manual_scroll_y = 0.0f;
+                } else if ((kDown & KEY_R) || (tDown && touch_hit(touch.px, touch.py, &BTN_MANUAL_NEXT))) {
+                    manual_topic_idx = (manual_topic_idx == 0) ? 1 : 0;
+                    manual_scroll_y = 0.0f;
+                } else {
+                    /* D-Pad and Circle Pad scrolling */
+                    float max_s = manual_get_max_scroll(manual_topic_idx);
+                    if ((kHeld & KEY_DUP) || (kHeld & KEY_CPAD_UP)) {
+                        manual_scroll_y -= 12.0f;
+                        if (manual_scroll_y < 0.0f) manual_scroll_y = 0.0f;
+                    } else if ((kHeld & KEY_DDOWN) || (kHeld & KEY_CPAD_DOWN)) {
+                        manual_scroll_y += 12.0f;
+                        if (manual_scroll_y > max_s) manual_scroll_y = max_s;
+                    }
+
+                    /* Touch drag scrolling */
+                    if (tDown && touch.py >= 36 && touch.py <= 236) {
+                        manual_touch_start_y = touch.py;
+                        manual_is_dragging = true;
+                    } else if (tHeld && manual_is_dragging) {
+                        float dy = touch.py - manual_touch_start_y;
+                        manual_scroll_y -= dy;
+                        manual_touch_start_y = touch.py;
+                        if (manual_scroll_y < 0.0f) manual_scroll_y = 0.0f;
+                        if (manual_scroll_y > max_s) manual_scroll_y = max_s;
+                    } else if (!tHeld) {
+                        manual_is_dragging = false;
+                    }
+                }
+                break;
             }
         }
         else if (alarm_view == STATE_ALARM_ADD || alarm_view == STATE_ALARM_EDIT) {
@@ -809,6 +858,7 @@ int main(int argc, char* argv[])
                 clock_view = CLOCK_VIEW_LIST;
                 confirm_del_city_idx = -1;
                 confirm_home_city_id = -1;
+                alert_home_city_id   = -1;
                 show_timer_zero_modal = false;
                 nav_handled = true;
             }
@@ -817,6 +867,7 @@ int main(int argc, char* argv[])
                 clock_view = CLOCK_VIEW_LIST;
                 confirm_del_city_idx = -1;
                 confirm_home_city_id = -1;
+                alert_home_city_id   = -1;
                 show_timer_zero_modal = false;
                 nav_handled = true;
             }
@@ -828,24 +879,28 @@ int main(int argc, char* argv[])
                     clock_view = CLOCK_VIEW_LIST;
                     confirm_del_city_idx = -1;
                     confirm_home_city_id = -1;
+                    alert_home_city_id   = -1;
                     nav_handled = true;
                 } else if (touch_hit(touch.px, touch.py, &TAB_CLOCK)) {
                     active_mode = MODE_CLOCK;
                     clock_view = CLOCK_VIEW_LIST;
                     confirm_del_city_idx = -1;
                     confirm_home_city_id = -1;
+                    alert_home_city_id   = -1;
                     nav_handled = true;
                 } else if (touch_hit(touch.px, touch.py, &TAB_STOPWATCH)) {
                     active_mode = MODE_STOPWATCH;
                     clock_view = CLOCK_VIEW_LIST;
                     confirm_del_city_idx = -1;
                     confirm_home_city_id = -1;
+                    alert_home_city_id   = -1;
                     nav_handled = true;
                 } else if (touch_hit(touch.px, touch.py, &TAB_TIMER)) {
                     active_mode = MODE_TIMER;
                     clock_view = CLOCK_VIEW_LIST;
                     confirm_del_city_idx = -1;
                     confirm_home_city_id = -1;
+                    alert_home_city_id   = -1;
                     nav_handled = true;
                 }
             }
@@ -853,6 +908,9 @@ int main(int argc, char* argv[])
             else if (tDown && touch_hit(touch.px, touch.py, &BTN_SETTINGS_ICON) && !(active_mode == MODE_CLOCK && clock_view == CLOCK_VIEW_PICKER)) {
                 is_settings  = true;
                 settings_sub = SET_MAIN;
+                confirm_del_city_idx = -1;
+                confirm_home_city_id = -1;
+                alert_home_city_id   = -1;
                 show_timer_zero_modal = false;
                 nav_handled  = true;
             }
@@ -947,6 +1005,10 @@ int main(int argc, char* argv[])
                             } else if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_MODAL_HOME_CANCEL))) {
                                 confirm_home_city_id = -1;
                             }
+                        } else if (alert_home_city_id >= 0) {
+                            if ((kDown & (KEY_A | KEY_B)) || (tDown && touch_hit(touch.px, touch.py, &BTN_OK))) {
+                                alert_home_city_id = -1;
+                            }
                         } else {
                             if ((kDown & KEY_Y) || (tDown && touch_hit(touch.px, touch.py, &BTN_CLOCK_ADD))) {
                                 if (save.world_city_count < MAX_WORLD_CITIES) {
@@ -963,6 +1025,8 @@ int main(int argc, char* argv[])
                                     u8 cid = save.world_cities[world_clock_state.selected_index];
                                     if (cid != save.home_city_id) {
                                         confirm_home_city_id = cid;
+                                    } else {
+                                        alert_home_city_id = cid;
                                     }
                                 }
                             } else if (save.world_city_count > 0 && hr_nav[1].triggered) {
@@ -1022,6 +1086,8 @@ int main(int argc, char* argv[])
                                             u8 cid = save.world_cities[idx];
                                             if (cid != save.home_city_id) {
                                                 confirm_home_city_id = cid;
+                                            } else {
+                                                alert_home_city_id = cid;
                                             }
                                         }
                                     }
@@ -1390,6 +1456,9 @@ int main(int argc, char* argv[])
                 case SET_DISPLAY:
                     ui_draw_settings_display(textBuf, save.auto_sleep_idx);
                     break;
+                case SET_MANUAL:
+                    manual_draw_bottom(textBuf, manual_topic_idx, manual_scroll_y);
+                    break;
                 }
             } else if (alarm_view == STATE_ALARM_ADD || alarm_view == STATE_ALARM_EDIT) {
                 const char* rname = audio_get_ringtone_name(edit_alarm_tone);
@@ -1422,6 +1491,8 @@ int main(int argc, char* argv[])
                             ui_draw_world_clock_delete_confirm(textBuf, save.world_cities[confirm_del_city_idx]);
                         } else if (confirm_home_city_id >= 0) {
                             ui_draw_world_clock_set_home_confirm(textBuf, (u8)confirm_home_city_id);
+                        } else if (alert_home_city_id >= 0) {
+                            ui_draw_world_clock_already_home(textBuf, (u8)alert_home_city_id);
                         }
                     }
                     break;

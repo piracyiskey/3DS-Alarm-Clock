@@ -122,6 +122,7 @@ const HitRect ARROW_ALARM_M_DOWN = { 168.0f,  98.0f, 56.0f, 24.0f };
 
 /* Settings overlay buttons */
 const HitRect BTN_SET_BACK = {10.0f, 4.0f, 70.0f, 28.0f};
+const HitRect BTN_SET_MANUAL = {240.0f, 4.0f, 70.0f, 28.0f};
 const HitRect BTN_SET_SAVE = {240.0f, 4.0f, 70.0f, 28.0f};
 const HitRect BTN_SET_TIME_DATE = {40.0f, 72.0f, 240.0f, 48.0f};
 const HitRect BTN_SET_DISPLAY = {40.0f, 136.0f, 240.0f, 48.0f};
@@ -161,7 +162,7 @@ const HitRect BTN_MODAL_HOME_SET    = { 170.0f, 140.0f, 115.0f, 36.0f };
 /*  Internal helpers                                                   */
 /* ------------------------------------------------------------------ */
 
-static void draw_button_scaled(C2D_TextBuf buf, const HitRect *r,
+void draw_button_scaled(C2D_TextBuf buf, const HitRect *r,
                                const char *label, float scale, u32 bg_color) {
   C2D_DrawRectSolid(r->x, r->y, 0.0f, r->w, r->h, bg_color);
 
@@ -177,13 +178,13 @@ static void draw_button_scaled(C2D_TextBuf buf, const HitRect *r,
   C2D_DrawText(&text, C2D_WithColor, tx, ty, 0.0f, scale, scale, CLR_TEXT);
 }
 
-static void draw_button(C2D_TextBuf buf, const HitRect *r, const char *label) {
+void draw_button(C2D_TextBuf buf, const HitRect *r, const char *label) {
   draw_button_scaled(buf, r, label, 0.65f, CLR_BTN);
 }
 
 /* Helper to set hardware scissor in landscape user coordinates (320x240 or 400x240)
  * on the tilted portrait framebuffer (240x320 or 240x400) */
-static void ui_set_scissor(GPU_SCISSORMODE mode, u32 x, u32 y, u32 w, u32 h) {
+void ui_set_scissor(GPU_SCISSORMODE mode, u32 x, u32 y, u32 w, u32 h) {
   C2D_Flush();
   if (mode == GPU_SCISSOR_DISABLE) {
     C3D_SetScissor(GPU_SCISSOR_DISABLE, 0, 0, 0, 0);
@@ -231,7 +232,7 @@ static void draw_modal_bg(void) {
   C2D_DrawRectSolid(20, 45, 0.0f, 280, 150, CLR_MODAL_BG);
 }
 
-static void draw_text_centered_x(C2D_TextBuf buf, const char *str, float y,
+void draw_text_centered_x(C2D_TextBuf buf, const char *str, float y,
                                  float scale, float screen_w) {
   C2D_Text text;
   C2D_TextParse(&text, buf, str);
@@ -289,7 +290,7 @@ static void draw_stepper_arrow_button(const HitRect *r, bool is_up) {
 }
 
 /* Draws an authentic 3DS System Settings horizontal stepper button (< or >) with border bevel and centered triangle */
-static void draw_stepper_arrow_button_horizontal(const HitRect *r, bool is_left) {
+void draw_stepper_arrow_button_horizontal(const HitRect *r, bool is_left) {
   bool is_pressed = is_hitrect_touched(r);
 
   u32 clr_face = is_pressed ? C2D_Color32(0x38, 0x3A, 0x42, 0xFF) : C2D_Color32(0x56, 0x58, 0x62, 0xFF);
@@ -1501,6 +1502,21 @@ void ui_draw_world_clock_set_home_confirm(C2D_TextBuf buf, u8 city_id) {
   draw_button_scaled(buf, &BTN_MODAL_HOME_SET, "Set Home", 0.55f, C2D_Color32(0x35, 0x7A, 0x38, 0xFF));
 }
 
+void ui_draw_world_clock_already_home(C2D_TextBuf buf, u8 city_id) {
+  draw_modal_bg();
+
+  const CityTimezone* tz = world_clock_get_city_info(city_id);
+
+  draw_text_centered_x(buf, "Home City", 58.0f, 0.70f, 320.0f);
+
+  char line1[64];
+  snprintf(line1, sizeof(line1), "%s is already set", tz->city);
+  draw_text_centered_x(buf, line1, 86.0f, 0.55f, 320.0f);
+  draw_text_centered_x(buf, "as your Home reference city!", 108.0f, 0.50f, 320.0f);
+
+  draw_button(buf, &BTN_OK, "OK");
+}
+
 void ui_draw_stopwatch_idle(C2D_TextBuf buf) {
   draw_button(buf, &BTN_SW_START, "Start");
 }
@@ -1588,6 +1604,7 @@ void ui_draw_settings_main(C2D_TextBuf buf) {
   C2D_DrawRectSolid(0.0f, 35.0f, 0.0f, 320.0f, 1.0f, CLR_TAB_SEP);
   draw_button(buf, &BTN_SET_BACK, "Back");
   draw_text_centered_x(buf, "Settings", 8.0f, 0.7f, 320.0f);
+  draw_button(buf, &BTN_SET_MANUAL, "Manual");
 
   /* Main option buttons (2 options) */
   draw_button(buf, &BTN_SET_TIME_DATE, "Edit Time & Date");
@@ -1751,7 +1768,7 @@ void ui_draw_modal_confirm(C2D_TextBuf buf) {
 void ui_draw_modal_confirm_reset_time(C2D_TextBuf buf) {
   draw_modal_bg();
   draw_text_centered_x(buf, "Reset clock to", 75.0f, 0.7f, 320.0f);
-  draw_text_centered_x(buf, "system time ONLY?", 100.0f, 0.7f, 320.0f);
+  draw_text_centered_x(buf, "system time?", 100.0f, 0.7f, 320.0f);
   draw_button(buf, &BTN_CANCEL, "Cancel");
   draw_button(buf, &BTN_CONFIRM, "Confirm");
 }

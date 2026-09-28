@@ -99,6 +99,7 @@ extern const HitRect ARROW_ALARM_M_UP,   ARROW_ALARM_M_DOWN;
 
 /* --- Settings overlay buttons --- */
 extern const HitRect BTN_SET_BACK;
+extern const HitRect BTN_SET_MANUAL;
 extern const HitRect BTN_SET_SAVE;
 extern const HitRect BTN_SET_TIME_DATE;
 extern const HitRect BTN_SET_DISPLAY;
@@ -127,6 +128,13 @@ extern const HitRect BTN_MODAL_CITY_CANCEL;
 extern const HitRect BTN_MODAL_CITY_DEL;
 extern const HitRect BTN_MODAL_HOME_CANCEL;
 extern const HitRect BTN_MODAL_HOME_SET;
+
+/* --- Shared Drawing Primitives --- */
+void draw_button(C2D_TextBuf buf, const HitRect *r, const char *label);
+void draw_button_scaled(C2D_TextBuf buf, const HitRect *r, const char *label, float scale, u32 bg_color);
+void draw_text_centered_x(C2D_TextBuf buf, const char *str, float y, float scale, float screen_w);
+void draw_stepper_arrow_button_horizontal(const HitRect *r, bool is_left);
+void ui_set_scissor(GPU_SCISSORMODE mode, u32 x, u32 y, u32 w, u32 h);
 
 /* --- Drawing functions --- */
 
@@ -192,6 +200,7 @@ void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListSta
 void ui_draw_city_picker(C2D_TextBuf buf, const SaveData* save, CityPickerState* state);
 void ui_draw_world_clock_delete_confirm(C2D_TextBuf buf, u8 city_id);
 void ui_draw_world_clock_set_home_confirm(C2D_TextBuf buf, u8 city_id);
+void ui_draw_world_clock_already_home(C2D_TextBuf buf, u8 city_id);
 
 
 void ui_draw_stopwatch_idle(C2D_TextBuf buf);
