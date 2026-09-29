@@ -276,10 +276,6 @@ void audio_set_volume(float volume) {
     ndspChnSetMix(0, mix);
 }
 
-float audio_get_volume(void) {
-    return s_volume;
-}
-
 void audio_init(void) {
     ndspInit();
     ndspSetOutputMode(NDSP_OUTPUT_STEREO);
@@ -322,7 +318,7 @@ void audio_init(void) {
 }
 
 static void audio_stop_internal(void) {
-    if (!s_is_playing && !s_mpg && !s_is_timer_active) return;
+    if (!s_is_playing && !s_is_timer_active) return;
 
     s_is_playing = false;
     s_is_timer_active = false;

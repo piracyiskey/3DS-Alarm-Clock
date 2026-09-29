@@ -82,7 +82,6 @@ typedef enum {
 extern const HitRect BTN_ALARM_ADD;
 extern const HitRect BTN_ALARM_EDIT_SAVE;
 extern const HitRect BTN_ALARM_EDIT_CANCEL;
-extern const HitRect BTN_ALARM_EDIT_DELETE;
 extern const HitRect BTN_ALARM_REPEAT_LEFT;
 extern const HitRect BTN_ALARM_REPEAT_RIGHT;
 extern const HitRect BTN_ALARM_TONE_LEFT;
@@ -108,8 +107,6 @@ extern const HitRect BTN_SET_EDIT_TIME;
 extern const HitRect BTN_SET_EDIT_DATE_BTN;
 extern const HitRect BTN_SET_RESET;
 extern const HitRect BTN_RESET_TIME;
-extern const HitRect BTN_SET_EDIT;
-extern const HitRect BTN_EDIT_DATE;
 
 /* --- Display & Power buttons --- */
 extern const HitRect BTN_DISP_BOTH_OFF;
@@ -196,7 +193,6 @@ void ui_draw_alarm_delete_confirm(C2D_TextBuf buf);
 void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode, const char* label, u32 frame_counter);
 void ui_draw_alarm_ringing_bottom(C2D_TextBuf buf, int h, int m, u8 repeat_mode, const char* label);
 void ui_draw_alarm_missed_modal(C2D_TextBuf buf, int missed_count);
-void ui_draw_clock_bottom(C2D_TextBuf buf);
 void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListState* state, C2D_Image settings_icon, C2D_Image trash_icon);
 void ui_draw_city_picker(C2D_TextBuf buf, const SaveData* save, CityPickerState* state);
 void ui_draw_world_clock_delete_confirm(C2D_TextBuf buf, u8 city_id);

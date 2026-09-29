@@ -90,10 +90,6 @@ void format_date_string(char* out, size_t sz, int y, int m, int d, DateFormat fm
     }
 }
 
-s64 clock_get_hw_rtc_ms(void)
-{
-    return (s64)osGetTime();
-}
 
 static s64 get_system_time_seconds(void)
 {
@@ -199,12 +195,3 @@ bool clock_has_offset(void)
     return g_has_offset;
 }
 
-s32 clock_get_time_offset_s(void)
-{
-    return g_time_offset_s;
-}
-
-s32 clock_get_date_offset_days(void)
-{
-    return g_date_offset_days;
-}

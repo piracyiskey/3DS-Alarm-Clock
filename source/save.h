@@ -34,7 +34,6 @@ typedef struct SaveData {
 void save_init(void);
 void save_exit(void);
 void save_flush(void);
-bool save_exists(void);
 bool save_read(SaveData* out);
 bool save_write(const SaveData* data);
 void save_reset(SaveData* data);

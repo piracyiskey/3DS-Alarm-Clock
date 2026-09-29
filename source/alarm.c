@@ -110,13 +110,6 @@ void alarm_delete(SaveData* save, int index) {
     }
 }
 
-void alarm_update(SaveData* save, int index) {
-    if (!save || index < 0 || index >= MAX_ALARMS) return;
-    if (save->alarms[index].id != ALARM_INVALID) {
-        save_write(save);
-    }
-}
-
 void alarm_sys_init(AlarmSystem* sys) {
     if (sys) {
         sys->ringing_mask = 0;

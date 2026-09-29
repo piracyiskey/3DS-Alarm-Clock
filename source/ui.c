@@ -97,7 +97,6 @@ const HitRect BTN_TMR_RESET = {170.0f, 75.0f, 120.0f, 50.0f};
 const HitRect BTN_ALARM_ADD = {240.0f, 2.0f, 36.0f, 28.0f};
 const HitRect BTN_ALARM_EDIT_SAVE = {245.0f, 4.0f, 65.0f, 28.0f};
 const HitRect BTN_ALARM_EDIT_CANCEL = {10.0f, 4.0f, 65.0f, 28.0f};
-const HitRect BTN_ALARM_EDIT_DELETE = {40.0f, 200.0f, 240.0f, 28.0f};
 const HitRect BTN_ALARM_REPEAT_LEFT = {ALARM_SEL_BTN_LEFT_X, ALARM_SEL_REPEAT_Y,
                                        ALARM_SEL_BTN_W, ALARM_SEL_ROW_H};
 const HitRect BTN_ALARM_REPEAT_RIGHT = {ALARM_SEL_BTN_RIGHT_X,
@@ -136,9 +135,6 @@ const HitRect BTN_SET_RESET = {40.0f, 168.0f, 240.0f, 40.0f};
 /* Edit Time bottom action */
 const HitRect BTN_RESET_TIME = {80.0f, BOTTOM_ACTION_Y, 160.0f, 30.0f};
 
-/* Preserved aliases */
-const HitRect BTN_SET_EDIT = {40.0f, 56.0f, 240.0f, 40.0f};
-const HitRect BTN_EDIT_DATE = {80.0f, BOTTOM_ACTION_Y, 160.0f, 30.0f};
 
 /* Display & Power Sub-Menu Buttons */
 const HitRect BTN_DISP_BOTH_OFF = {40.0f, 48.0f, 240.0f, 40.0f};
@@ -252,8 +248,8 @@ static bool is_hitrect_touched(const HitRect *r) {
   if (!(kHeld & KEY_TOUCH)) return false;
   touchPosition touch;
   hidTouchRead(&touch);
-  return (touch.px >= r->x && touch.px <= r->x + r->w &&
-          touch.py >= r->y && touch.py <= r->y + r->h);
+  return (touch.px >= r->x && touch.px < r->x + r->w &&
+          touch.py >= r->y && touch.py < r->y + r->h);
 }
 
 /* Draws an authentic 3DS System Settings stepper button with border bevel and centered arrow */
@@ -1258,9 +1254,6 @@ void ui_draw_alarm_missed_modal(C2D_TextBuf buf, int missed_count) {
   draw_button(buf, &BTN_ALARM_MISSED_OK, "OK");
 }
 
-void ui_draw_clock_bottom(C2D_TextBuf buf) {
-  draw_text_centered_x(buf, "World Clock", 85.0f, 0.75f, 320.0f);
-}
 
 void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListState* state,
                               C2D_Image settings_icon, C2D_Image trash_icon) {

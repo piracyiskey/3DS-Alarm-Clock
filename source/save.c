@@ -167,14 +167,6 @@ void save_init_default(SaveData* data)
     data->world_cities[2]  = 58; /* New York */
 }
 
-bool save_exists(void)
-{
-    FILE* f = fopen(SAVE_PATH, "rb");
-    if (!f) return false;
-    fclose(f);
-    return true;
-}
-
 bool save_read(SaveData* out)
 {
     if (s_save_pending) {

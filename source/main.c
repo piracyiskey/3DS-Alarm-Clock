@@ -585,7 +585,7 @@ int main(int argc, char* argv[])
                 if ((kDown & KEY_B) ||
                     (tDown && touch_hit(touch.px, touch.py, &BTN_SET_BACK))) {
                     is_settings = false;
-                } else if (tDown && (touch_hit(touch.px, touch.py, &BTN_SET_TIME_DATE) || touch_hit(touch.px, touch.py, &BTN_SET_EDIT))) {
+                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_TIME_DATE)) {
                     settings_sub = SET_TIME_DATE_MENU;
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_DISPLAY)) {
                     settings_sub = SET_DISPLAY;
@@ -670,7 +670,7 @@ int main(int argc, char* argv[])
                     clock_apply_time_edit(edit_h, edit_m, edit_s, &save);
                     save_msg = "Time saved successfully!";
                     settings_sub = SET_SAVE_OK;
-                } else if (tDown && (touch_hit(touch.px, touch.py, &BTN_RESET_TIME) || touch_hit(touch.px, touch.py, &BTN_EDIT_DATE))) {
+                } else if (tDown && touch_hit(touch.px, touch.py, &BTN_RESET_TIME)) {
                     settings_sub = SET_CONFIRM_RESET_TIME;
                 } else {
                     hold_repeat_update(&hr_time[0], tHeld && touch_hit(touch.px, touch.py, &ARROW_H_UP));
