@@ -230,14 +230,14 @@ void audio_scan_sd_ringtones(void) {
     ringtone_count++;
 
     /* Slot 4..19: User SD Card MP3 Ringtones */
-    DIR* dir = opendir("sdmc:/3ds/3ds-clock/ringtones");
+    DIR* dir = opendir("sdmc:/3ds/pocketclock/ringtones");
     if (dir) {
         struct dirent* ent;
         while ((ent = readdir(dir)) != NULL && ringtone_count < AUDIO_NUM_BUILTIN_TONES + AUDIO_MAX_USER_TONES) {
             int len = strlen(ent->d_name);
             if (len > 4 && strcasecmp(ent->d_name + len - 4, ".mp3") == 0) {
                 snprintf(ringtones[ringtone_count].sd_path, sizeof(ringtones[ringtone_count].sd_path),
-                         "sdmc:/3ds/3ds-clock/ringtones/%s", ent->d_name);
+                         "sdmc:/3ds/pocketclock/ringtones/%s", ent->d_name);
                 ringtones[ringtone_count].source = RINGTONE_SRC_SD_MP3;
                 ringtones[ringtone_count].pcm_data = NULL;
                 ringtones[ringtone_count].pcm_size = 0;
@@ -301,8 +301,8 @@ void audio_init(void) {
 
     /* Ensure standard ringtones directory exists on SD */
     mkdir("sdmc:/3ds", 0777);
-    mkdir("sdmc:/3ds/3ds-clock", 0777);
-    mkdir("sdmc:/3ds/3ds-clock/ringtones", 0777);
+    mkdir("sdmc:/3ds/pocketclock", 0777);
+    mkdir("sdmc:/3ds/pocketclock/ringtones", 0777);
 
     /* Dedicated Timer Tone Setup */
     strncpy(s_timer_tone.name, "Timer", 31);

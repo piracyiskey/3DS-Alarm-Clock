@@ -179,6 +179,35 @@ void draw_button(C2D_TextBuf buf, const HitRect *r, const char *label) {
   draw_button_scaled(buf, r, label, 0.65f, CLR_BTN);
 }
 
+/* Add button icon size and micro-adjustment offsets */
+#define ADD_BTN_ICON_SIZE 20.0f
+#define ADD_BTN_OFFSET_X  0.0f
+#define ADD_BTN_OFFSET_Y  0.0f
+
+static void draw_add_button(C2D_TextBuf buf, const HitRect *r, C2D_Image add_icon) {
+  C2D_DrawRectSolid(r->x, r->y, 0.0f, r->w, r->h, CLR_BTN);
+
+  if (add_icon.subtex) {
+    float icon_sz = ADD_BTN_ICON_SIZE;
+    float scale_x = icon_sz / (float)add_icon.subtex->width;
+    float scale_y = icon_sz / (float)add_icon.subtex->height;
+    float icon_x = r->x + (r->w - icon_sz) / 2.0f + ADD_BTN_OFFSET_X;
+    float icon_y = r->y + (r->h - icon_sz) / 2.0f + ADD_BTN_OFFSET_Y;
+    C2D_DrawImageAt(add_icon, icon_x, icon_y, 0.0f, NULL, scale_x, scale_y);
+  } else {
+    C2D_Text text;
+    C2D_TextParse(&text, buf, "+");
+    C2D_TextOptimize(&text);
+
+    float tw, th;
+    C2D_TextGetDimensions(&text, 0.70f, 0.70f, &tw, &th);
+
+    float tx = r->x + (r->w - tw) / 2.0f;
+    float ty = r->y + (r->h - th) / 2.0f;
+    C2D_DrawText(&text, C2D_WithColor, tx, ty, 0.0f, 0.70f, 0.70f, CLR_TEXT);
+  }
+}
+
 /* Helper to set hardware scissor in landscape user coordinates (320x240 or 400x240)
  * on the tilted portrait framebuffer (240x320 or 240x400) */
 void ui_set_scissor(GPU_SCISSORMODE mode, u32 x, u32 y, u32 w, u32 h) {
@@ -897,7 +926,8 @@ void ui_draw_tab_bar(C2D_TextBuf buf, AppMode active, const C2D_Image tab_icons[
 /* ------------------------------------------------------------------ */
 
 void ui_draw_alarm_list(C2D_TextBuf buf, SaveData *save, AlarmListState *state,
-                        C2D_Image settings_icon, C2D_Image trash_icon) {
+                        C2D_Image settings_icon, C2D_Image trash_icon,
+                        C2D_Image add_icon) {
   if (save->alarm_count == 0) {
     draw_text_centered_x(buf, "No alarms set", 95.0f, 0.65f, 320.0f);
     draw_text_centered_x(buf, "Tap [+] above to add an alarm", 125.0f, 0.50f, 320.0f);
@@ -1004,7 +1034,7 @@ void ui_draw_alarm_list(C2D_TextBuf buf, SaveData *save, AlarmListState *state,
   ui_draw_header(buf, settings_icon, "Alarms");
 
   /* Draw Add Button (+) on top of header */
-  draw_button_scaled(buf, &BTN_ALARM_ADD, "+", 0.70f, CLR_BTN);
+  draw_add_button(buf, &BTN_ALARM_ADD, add_icon);
 }
 
 void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
@@ -1048,7 +1078,7 @@ void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
   /* 3. Ringtone Selector — Centered unit: [Tone:] [<] [ Value Container ] [>]
    */
   C2D_Text txt_tone;
-  C2D_TextParse(&txt_tone, buf, "Tone:");
+  C2D_TextParse(&txt_tone, buf, "Ringtone:");
   C2D_TextOptimize(&txt_tone);
   float tw_tl, th_tl;
   C2D_TextGetDimensions(&txt_tone, 0.55f, 0.55f, &tw_tl, &th_tl);
@@ -1256,7 +1286,8 @@ void ui_draw_alarm_missed_modal(C2D_TextBuf buf, int missed_count) {
 
 
 void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListState* state,
-                              C2D_Image settings_icon, C2D_Image trash_icon) {
+                              C2D_Image settings_icon, C2D_Image trash_icon,
+                              C2D_Image add_icon) {
   if (save->world_city_count == 0) {
     draw_text_centered_x(buf, "No world cities added", 95.0f, 0.65f, 320.0f);
     draw_text_centered_x(buf, "Tap [+] above to add a city", 125.0f, 0.50f, 320.0f);
@@ -1368,7 +1399,7 @@ void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListSta
   ui_draw_header(buf, settings_icon, "World Clock");
 
   /* Draw Add Button (+) on top of header */
-  draw_button_scaled(buf, &BTN_CLOCK_ADD, "+", 0.70f, CLR_BTN);
+  draw_add_button(buf, &BTN_CLOCK_ADD, add_icon);
 }
 
 void ui_draw_city_picker(C2D_TextBuf buf, const SaveData* save, CityPickerState* state) {

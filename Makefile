@@ -31,7 +31,7 @@ include $(DEVKITARM)/3ds_rules
 #     - icon.png
 #     - <libctru folder>/default_icon.png
 #---------------------------------------------------------------------------------
-TARGET		:=	my3dsapp
+TARGET		:=	PocketClock
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data
@@ -39,8 +39,8 @@ INCLUDES	:=	include
 GRAPHICS	:=	gfx
 GFXBUILD	:=	$(BUILD)
 
-APP_TITLE	:=	3DS Clock
-APP_DESCRIPTION	:=	Dual-screen 3DS Clock & Alarms v1.0.0
+APP_TITLE	:=	PocketClock
+APP_DESCRIPTION	:=	Dual-screen Clock & Alarms Suite v1.0.0
 APP_AUTHOR	:=	Nguyen Manh Dung
 
 #---------------------------------------------------------------------------------

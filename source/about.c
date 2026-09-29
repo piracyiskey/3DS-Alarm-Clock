@@ -24,7 +24,7 @@ typedef struct {
 } AboutLine;
 
 static const AboutLine s_about_lines[] = {
-    {AL_APP_TITLE, "3DS Alarm Clock"},
+    {AL_APP_TITLE, "PocketClock"},
     {AL_APP_VERSION, "Version 1.0.0"},
     {AL_DIVIDER, NULL},
 
@@ -45,7 +45,7 @@ static const AboutLine s_about_lines[] = {
     {AL_LINE_BULLET, "Luma3DS Team"},
     {AL_SPACER, NULL},
 
-    {AL_CARD_THANK_YOU, "Thank you for downloading and using 3DS Clock!"}};
+    {AL_CARD_THANK_YOU, "Thank you for downloading and using PocketClock!"}};
 
 static const int s_about_line_count = sizeof(s_about_lines) / sizeof(AboutLine);
 

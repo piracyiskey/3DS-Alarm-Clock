@@ -318,10 +318,12 @@ int main(int argc, char* argv[])
     C2D_SpriteSheet sprite_sheet = C2D_SpriteSheetLoadFromMem(icons_t3x, icons_t3x_size);
     C2D_Image settings_icon = { NULL, NULL };
     C2D_Image trash_icon = { NULL, NULL };
+    C2D_Image add_icon = { NULL, NULL };
     C2D_Image tab_icons[4] = { { NULL, NULL } };
     if (sprite_sheet) {
         settings_icon = C2D_SpriteSheetGetImage(sprite_sheet, icons_settings_idx);
         trash_icon = C2D_SpriteSheetGetImage(sprite_sheet, icons_trash_2_idx);
+        add_icon = C2D_SpriteSheetGetImage(sprite_sheet, icons_add_idx);
         tab_icons[MODE_ALARM]     = C2D_SpriteSheetGetImage(sprite_sheet, icons_alarm_idx);
         tab_icons[MODE_CLOCK]     = C2D_SpriteSheetGetImage(sprite_sheet, icons_clock_idx);
         tab_icons[MODE_STOPWATCH] = C2D_SpriteSheetGetImage(sprite_sheet, icons_stopwatch_idx);
@@ -1527,7 +1529,7 @@ int main(int argc, char* argv[])
                 /* Draw mode content */
                 switch (active_mode) {
                 case MODE_ALARM:
-                    ui_draw_alarm_list(textBuf, &save, &alarm_list_state, settings_icon, trash_icon);
+                    ui_draw_alarm_list(textBuf, &save, &alarm_list_state, settings_icon, trash_icon, add_icon);
                     if (show_delete_confirm) {
                         ui_draw_alarm_delete_confirm(textBuf);
                     }
@@ -1537,7 +1539,7 @@ int main(int argc, char* argv[])
                     if (clock_view == CLOCK_VIEW_PICKER) {
                         ui_draw_city_picker(textBuf, &save, &city_picker_state);
                     } else {
-                        ui_draw_world_clock_list(textBuf, &save, &world_clock_state, settings_icon, trash_icon);
+                        ui_draw_world_clock_list(textBuf, &save, &world_clock_state, settings_icon, trash_icon, add_icon);
                         if (confirm_del_city_idx >= 0 && confirm_del_city_idx < save.world_city_count) {
                             ui_draw_world_clock_delete_confirm(textBuf, save.world_cities[confirm_del_city_idx]);
                         } else if (confirm_home_city_id >= 0) {

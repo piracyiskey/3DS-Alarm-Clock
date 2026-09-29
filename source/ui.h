@@ -187,13 +187,13 @@ typedef struct {
     int   selected_index;
 } CityPickerState;
 
-void ui_draw_alarm_list(C2D_TextBuf buf, SaveData* save, AlarmListState* state, C2D_Image settings_icon, C2D_Image trash_icon);
+void ui_draw_alarm_list(C2D_TextBuf buf, SaveData* save, AlarmListState* state, C2D_Image settings_icon, C2D_Image trash_icon, C2D_Image add_icon);
 void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode, u8 ringtone_id, bool is_new, const char* ringtone_name, const char* label, bool is_playing);
 void ui_draw_alarm_delete_confirm(C2D_TextBuf buf);
 void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode, const char* label, u32 frame_counter);
 void ui_draw_alarm_ringing_bottom(C2D_TextBuf buf, int h, int m, u8 repeat_mode, const char* label);
 void ui_draw_alarm_missed_modal(C2D_TextBuf buf, int missed_count);
-void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListState* state, C2D_Image settings_icon, C2D_Image trash_icon);
+void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListState* state, C2D_Image settings_icon, C2D_Image trash_icon, C2D_Image add_icon);
 void ui_draw_city_picker(C2D_TextBuf buf, const SaveData* save, CityPickerState* state);
 void ui_draw_world_clock_delete_confirm(C2D_TextBuf buf, u8 city_id);
 void ui_draw_world_clock_set_home_confirm(C2D_TextBuf buf, u8 city_id);

@@ -8,7 +8,7 @@
 
 _Static_assert(sizeof(SaveData) == 1360, "SaveData must be exactly 1360 bytes");
 
-#define SAVE_DIR  "sdmc:/3ds/3ds-clock"
+#define SAVE_DIR  "sdmc:/3ds/pocketclock"
 #define SAVE_PATH SAVE_DIR "/save.dat"
 
 #define V1_MAGIC  0x434C4B30  /* "CLK0" */
