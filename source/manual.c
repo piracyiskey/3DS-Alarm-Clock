@@ -46,8 +46,10 @@ typedef struct {
 /* Page 0: Essential Tips & Setup (Practical Bedside Guide) */
 static const ManualLine s_lines_page_0[] = {
     {ML_HEADER, "ESSENTIAL TIPS & SETUP"},
-    {ML_CALLOUT_HEADER, "OVERNIGHT ALARM (MUST-READ)"},
-    {ML_CALLOUT_TEXT, "* Leave lid open (closing lid cuts speaker power)"},
+    {ML_CALLOUT_HEADER, "OVERNIGHT ALARM SETUP (MUST-READ)"},
+    {ML_CALLOUT_TEXT, "* Leave lid open (closing lid cuts internal speakers)"},
+    {ML_CALLOUT_TEXT, "  (Or connect headphones/AUX to close lid)"},
+    {ML_CALLOUT_TEXT, "* Set volume slider to maximum"},
     {ML_CALLOUT_TEXT, "* Turn off screens with [L + R] to save battery"},
     {ML_CALLOUT_TEXT, "  (Screens wake up automatically on alarm!)"},
     {ML_CALLOUT_TEXT, "* Keep plugged into charger so battery won't die"},
@@ -56,7 +58,7 @@ static const ManualLine s_lines_page_0[] = {
     {ML_SPACER, NULL},
     {ML_SUBHEADER, "Dimming Front LEDs at Night"},
     {ML_BODY, "If console power or wireless LEDs are too bright:"},
-    {ML_BULLET, "Open Rosalina: [L] + [D-Pad Down] + [Select]"},
+    {ML_BULLET, "Open Rosalina Menu: [L] + [D-Pad Down] + [Select]"},
     {ML_BULLET, "Choose: System Configuration -> Toggle LEDs"},
     {ML_SPACER, NULL},
     {ML_SUBHEADER, "Custom MP3 Ringtones"},
@@ -196,7 +198,7 @@ void manual_draw_bottom(C2D_TextBuf buf, int page_idx, float scroll_y) {
     for (int i = 0; i < pd->count; i++) {
       const ManualLine *line = &pd->lines[i];
       float lh = get_line_height(line->type);
-      float render_h = (line->type == ML_CALLOUT_HEADER) ? 108.0f : lh;
+      float render_h = (line->type == ML_CALLOUT_HEADER) ? 138.0f : lh;
 
       /* View-frustum culling */
       if (cur_y + render_h >= 36.0f && cur_y <= 240.0f) {
@@ -215,15 +217,15 @@ void manual_draw_bottom(C2D_TextBuf buf, int page_idx, float scroll_y) {
         case ML_CALLOUT_HEADER:
           /* Amber/Red Callout box with symmetric margins and balanced padding
            */
-          C2D_DrawRectSolid(10.0f, cur_y, 0.0f, 300.0f, 108.0f,
+          C2D_DrawRectSolid(10.0f, cur_y, 0.0f, 300.0f, 138.0f,
                             C2D_Color32(0x28, 0x1A, 0x16, 0xFF));
           C2D_DrawRectSolid(10.0f, cur_y, 0.0f, 300.0f, 1.0f,
                             C2D_Color32(0x9E, 0x30, 0x24, 0xFF));
-          C2D_DrawRectSolid(10.0f, cur_y + 107.0f, 0.0f, 300.0f, 1.0f,
+          C2D_DrawRectSolid(10.0f, cur_y + 137.0f, 0.0f, 300.0f, 1.0f,
                             C2D_Color32(0x9E, 0x30, 0x24, 0xFF));
-          C2D_DrawRectSolid(10.0f, cur_y, 0.0f, 1.0f, 108.0f,
+          C2D_DrawRectSolid(10.0f, cur_y, 0.0f, 1.0f, 138.0f,
                             C2D_Color32(0x9E, 0x30, 0x24, 0xFF));
-          C2D_DrawRectSolid(309.0f, cur_y, 0.0f, 1.0f, 108.0f,
+          C2D_DrawRectSolid(309.0f, cur_y, 0.0f, 1.0f, 138.0f,
                             C2D_Color32(0x9E, 0x30, 0x24, 0xFF));
 
           draw_text_left(buf, line->text, 18.0f, cur_y + 7.0f, 0.48f,

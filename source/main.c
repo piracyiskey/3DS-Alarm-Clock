@@ -124,6 +124,16 @@ static void telemetry_update(bool force)
             telemetry_is_charging = (charge_state != 0);
         }
     }
+
+    /* 4. Headphone-aware sleep policy:
+     * When headphones/AUX are connected to the 3.5mm jack, the hardware headphone amp
+     * remains powered even when the clamshell lid is closed. Disallowing sleep allows
+     * the alarm to continue ticking and ring through headphones/AUX with the lid closed.
+     * When unplugged, allow normal sleep to prevent silent battery drain into disconnected internal speakers. */
+    bool headphones_inserted = false;
+    if (R_SUCCEEDED(DSP_GetHeadphoneStatus(&headphones_inserted))) {
+        aptSetSleepAllowed(!headphones_inserted);
+    }
 }
 
 

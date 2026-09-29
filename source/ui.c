@@ -703,7 +703,7 @@ void ui_draw_top_stopwatch(C2D_TextBuf buf, const Stopwatch* sw, int hh, int mm,
   float ctw, cth;
   C2D_TextGetDimensions(&top_clock, clk_scale, clk_scale, &ctw, &cth);
   float clk_x = (400.0f - ctw) / 2.0f;
-  C2D_DrawText(&top_clock, C2D_WithColor, clk_x, 32.0f, 0.0f, clk_scale, clk_scale, CLR_TEXT);
+  C2D_DrawText(&top_clock, C2D_WithColor, clk_x, 26.0f, 0.0f, clk_scale, clk_scale, CLR_TEXT);
 
   /* Column Headers Bar at Y = 68.0f .. 88.0f */
   C2D_DrawRectSolid(0.0f, 68.0f, 0.0f, 400.0f, 20.0f, C2D_Color32(0x22, 0x22, 0x22, 0xFF));
