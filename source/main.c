@@ -1391,6 +1391,15 @@ int main(int argc, char* argv[])
         } else if (timer_ringing) {
             ui_draw_timer_ringing_top(textBuf, tmr.target_h, tmr.target_m, tmr.target_s, timer_ring_frames);
             timer_ring_frames++;
+        } else if (is_settings) {
+            int h, m, s;
+            int y, mo, d;
+            clock_get_hms(&h, &m, &s);
+            clock_get_ymd(&y, &mo, &d);
+
+            char date_str[64];
+            format_date_string(date_str, sizeof(date_str), y, mo, d, (DateFormat)save.date_format);
+            ui_draw_top_clock_with_date(textBuf, h, m, s, date_str);
         } else if (active_mode == MODE_ALARM) {
             int h, m, s;
             int y, mo, d;
@@ -1428,15 +1437,6 @@ int main(int argc, char* argv[])
             }
 
             ui_draw_top_clock_with_alarm_status(textBuf, h, m, s, date_str, alarm_status_str);
-        } else if (is_settings) {
-            int h, m, s;
-            int y, mo, d;
-            clock_get_hms(&h, &m, &s);
-            clock_get_ymd(&y, &mo, &d);
-
-            char date_str[64];
-            format_date_string(date_str, sizeof(date_str), y, mo, d, (DateFormat)save.date_format);
-            ui_draw_top_clock_with_date(textBuf, h, m, s, date_str);
         } else if (active_mode == MODE_CLOCK) {
             int h, m, s;
             int y, mo, d;
