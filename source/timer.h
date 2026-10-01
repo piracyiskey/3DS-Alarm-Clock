@@ -25,4 +25,3 @@ void timer_resume(Timer* tmr);
 void timer_reset(Timer* tmr);
 void timer_dismiss(Timer* tmr);
 void timer_get_display(Timer* tmr, int* hh, int* mm, int* ss);
-bool timer_is_expired(Timer* tmr);

@@ -1329,7 +1329,11 @@ void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListSta
       } else {
         const char* day_name = (day_off == 0) ? "Today" : ((day_off > 0) ? "Tomorrow" : "Yesterday");
         if (diff_m != 0) {
-          snprintf(badge, sizeof(badge), "%s, %+d:%02d hrs • %s", day_name, diff_h, abs(diff_m), tz->country);
+          if (diff_m < 0 && diff_h == 0) {
+            snprintf(badge, sizeof(badge), "%s, -0:%02d hrs • %s", day_name, abs(diff_m), tz->country);
+          } else {
+            snprintf(badge, sizeof(badge), "%s, %+d:%02d hrs • %s", day_name, diff_h, abs(diff_m), tz->country);
+          }
         } else {
           snprintf(badge, sizeof(badge), "%s, %+d hrs • %s", day_name, diff_h, tz->country);
         }

@@ -19,8 +19,6 @@
 /* Embedded binary PCM16 blobs (converted via ffmpeg at build time) */
 extern const u8 default_alarm_bin[];
 extern const u8 default_alarm_bin_end[];
-extern const u8 lofi_bin[];
-extern const u8 lofi_bin_end[];
 extern const u8 timer_bin[];
 extern const u8 timer_bin_end[];
 extern const u8 digital_clock_bin[];
@@ -196,18 +194,7 @@ void audio_scan_sd_ringtones(void) {
     ringtones[ringtone_count].sd_path[0] = '\0';
     ringtone_count++;
 
-    /* Slot 1: Lo-Fi (Embedded PCM16) */
-    strncpy(ringtones[ringtone_count].name, "Lo-Fi", 31);
-    ringtones[ringtone_count].name[31] = '\0';
-    ringtones[ringtone_count].source = RINGTONE_SRC_BUILTIN;
-    ringtones[ringtone_count].pcm_data = lofi_bin;
-    ringtones[ringtone_count].pcm_size = (u32)(lofi_bin_end - lofi_bin);
-    ringtones[ringtone_count].sample_rate = 22050;
-    ringtones[ringtone_count].channels = 2;
-    ringtones[ringtone_count].sd_path[0] = '\0';
-    ringtone_count++;
-
-    /* Slot 2: Digital Clock (Embedded PCM16) */
+    /* Slot 1: Digital Clock (Embedded PCM16) */
     strncpy(ringtones[ringtone_count].name, "Digital Clock", 31);
     ringtones[ringtone_count].name[31] = '\0';
     ringtones[ringtone_count].source = RINGTONE_SRC_BUILTIN;
@@ -218,7 +205,7 @@ void audio_scan_sd_ringtones(void) {
     ringtones[ringtone_count].sd_path[0] = '\0';
     ringtone_count++;
 
-    /* Slot 3: Christmas (Embedded PCM16) */
+    /* Slot 2: Christmas (Embedded PCM16) */
     strncpy(ringtones[ringtone_count].name, "Christmas", 31);
     ringtones[ringtone_count].name[31] = '\0';
     ringtones[ringtone_count].source = RINGTONE_SRC_BUILTIN;
@@ -229,7 +216,7 @@ void audio_scan_sd_ringtones(void) {
     ringtones[ringtone_count].sd_path[0] = '\0';
     ringtone_count++;
 
-    /* Slot 4..19: User SD Card MP3 Ringtones */
+    /* Slot 3..18: User SD Card MP3 Ringtones */
     DIR* dir = opendir("sdmc:/3ds/pocketclock/ringtones");
     if (dir) {
         struct dirent* ent;
@@ -505,10 +492,10 @@ void audio_exit(void) {
 
     mpg123_exit();
 
+    ndspExit();
+
     if (s_linear_buf) {
         linearFree(s_linear_buf);
         s_linear_buf = NULL;
     }
-
-    ndspExit();
 }

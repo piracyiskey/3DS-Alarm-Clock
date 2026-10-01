@@ -91,14 +91,3 @@ void timer_get_display(Timer* tmr, int* hh, int* mm, int* ss)
     *mm = (int)((total_s % 3600) / 60);
     *ss = (int)(total_s % 60);
 }
-
-bool timer_is_expired(Timer* tmr)
-{
-    if (tmr->state == TMR_RUNNING) {
-        if (osGetTime() >= tmr->deadline_ms) {
-            tmr->state = TMR_EXPIRED;
-            return true;
-        }
-    }
-    return (tmr->state == TMR_EXPIRED);
-}

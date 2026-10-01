@@ -62,6 +62,7 @@ static LightEvent    s_save_event;
 static LightLock     s_save_lock;
 static SaveData      s_pending_save;
 static volatile bool s_save_pending = false;
+static volatile bool s_is_writing = false;
 static volatile bool s_save_quit = false;
 
 static bool save_write_to_disk(const SaveData* data)
@@ -99,7 +100,9 @@ static void save_thread_entry(void* arg)
         LightLock_Unlock(&s_save_lock);
 
         if (has_work) {
+            s_is_writing = true;
             save_write_to_disk(&to_write);
+            s_is_writing = false;
         }
     }
 }
@@ -120,6 +123,7 @@ void save_init(void)
     LightEvent_Init(&s_save_event, RESET_ONESHOT);
     LightLock_Init(&s_save_lock);
     s_save_pending = false;
+    s_is_writing = false;
     s_save_quit = false;
 
     /* Priority 0x31 (lower than audio at 0x18 and main thread at 0x30) */
@@ -130,7 +134,7 @@ void save_flush(void)
 {
     if (!s_save_thread) return;
 
-    while (s_save_pending) {
+    while (s_save_pending || s_is_writing) {
         svcSleepThread(2 * 1000 * 1000LL); /* 2ms */
     }
     svcSleepThread(5 * 1000 * 1000LL);     /* 5ms settling */
@@ -188,7 +192,10 @@ bool save_read(SaveData* out)
         fclose(f);
         if (n != sizeof(*out)) return false;
 
-        /* Validate / sanitize world clock fields for upgraded v3 saves */
+        /* Validate / sanitize alarm and world clock fields for loaded save */
+        if (out->alarm_count > MAX_ALARMS) {
+            out->alarm_count = MAX_ALARMS;
+        }
         if (out->home_city_id >= world_clock_get_total_cities()) {
             out->home_city_id = 46; /* London */
         }
@@ -196,6 +203,7 @@ bool save_read(SaveData* out)
             out->world_city_count = 3;
             out->world_cities[0] = 78; /* Tokyo */
             out->world_cities[1] = 46; /* London */
+            out->world_cities[2] = 58; /* New York */
         } else {
             for (int i = 0; i < out->world_city_count; i++) {
                 if (out->world_cities[i] >= world_clock_get_total_cities()) {

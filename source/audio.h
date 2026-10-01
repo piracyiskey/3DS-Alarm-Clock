@@ -2,7 +2,7 @@
 #include <3ds/types.h>
 #include <stdbool.h>
 
-#define AUDIO_NUM_BUILTIN_TONES 4
+#define AUDIO_NUM_BUILTIN_TONES 3
 #define AUDIO_MAX_USER_TONES 16
 
 typedef enum {

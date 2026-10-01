@@ -29,7 +29,7 @@ void alarm_sort(SaveData* save) {
     }
 }
 
-int alarm_add(SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id, const char* label) {
+int alarm_add(SaveData* save, AlarmSystem* sys, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id, const char* label) {
     if (!save) return -1;
     if (save->alarm_count >= MAX_ALARMS) return -1;
 
@@ -47,6 +47,13 @@ int alarm_add(SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id
     /* Shift elements right from insert_idx to make room */
     for (int i = save->alarm_count; i > insert_idx; i--) {
         save->alarms[i] = save->alarms[i - 1];
+    }
+
+    /* Keep active snooze parent synchronized when alarms shift right */
+    if (sys && sys->snooze.active) {
+        if (insert_idx <= sys->snooze.parent_alarm_id && sys->snooze.parent_alarm_id < MAX_ALARMS - 1) {
+            sys->snooze.parent_alarm_id++;
+        }
     }
 
     /* Guard against immediate triggering if scheduled time for today already passed */
@@ -89,15 +96,15 @@ int alarm_add(SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id
 void alarm_delete(SaveData* save, AlarmSystem* sys, int index) {
     if (!save || index < 0 || index >= MAX_ALARMS) return;
 
-    if (sys && sys->snooze.active) {
-        if (index == sys->snooze.parent_alarm_id) {
-            alarm_snooze_clear(sys);
-        } else if (index < sys->snooze.parent_alarm_id) {
-            sys->snooze.parent_alarm_id--;
-        }
-    }
-
     if (save->alarms[index].id != ALARM_INVALID) {
+        if (sys && sys->snooze.active) {
+            if (index == sys->snooze.parent_alarm_id) {
+                alarm_snooze_clear(sys);
+            } else if (index < sys->snooze.parent_alarm_id) {
+                sys->snooze.parent_alarm_id--;
+            }
+        }
+
         save->alarm_count--;
         
         /* Compact array */

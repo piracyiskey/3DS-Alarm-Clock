@@ -2,7 +2,6 @@
 #include <3ds.h>
 #include <stdio.h>
 
-static bool g_has_offset;
 static s32  g_time_offset_s;
 static s32  g_date_offset_days;
 
@@ -101,7 +100,6 @@ void clock_init(s32 time_offset_s, s32 date_offset_days)
 {
     g_time_offset_s    = time_offset_s;
     g_date_offset_days = date_offset_days;
-    g_has_offset       = (time_offset_s != 0 || date_offset_days != 0);
 }
 
 s64 get_display_time_seconds(void)
@@ -140,7 +138,6 @@ void clock_apply_time_edit(int h, int m, int s, SaveData* save)
     if (sys_tod < 0) sys_tod += 86400;
 
     g_time_offset_s = desired_tod - sys_tod;
-    g_has_offset    = (g_time_offset_s != 0 || g_date_offset_days != 0);
 
     if (save) {
         save->time_offset_s    = g_time_offset_s;
@@ -159,7 +156,6 @@ void clock_apply_date_edit(int y, int m, int d, SaveData* save)
     if (sys_tod < 0) sys_days--;
 
     g_date_offset_days = (s32)(target_days - sys_days);
-    g_has_offset       = (g_time_offset_s != 0 || g_date_offset_days != 0);
 
     if (save) {
         save->time_offset_s    = g_time_offset_s;
@@ -172,7 +168,6 @@ void clock_reset(SaveData* save)
 {
     g_time_offset_s    = 0;
     g_date_offset_days = 0;
-    g_has_offset       = false;
 
     if (save) {
         save_reset(save);
@@ -182,16 +177,10 @@ void clock_reset(SaveData* save)
 void clock_reset_time(SaveData* save)
 {
     g_time_offset_s = 0;
-    g_has_offset    = (g_date_offset_days != 0);
 
     if (save) {
         save->time_offset_s = 0;
         save_write(save);
     }
-}
-
-bool clock_has_offset(void)
-{
-    return g_has_offset;
 }
 

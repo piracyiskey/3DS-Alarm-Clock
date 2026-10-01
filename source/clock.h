@@ -13,7 +13,6 @@ void clock_apply_time_edit(int h, int m, int s, SaveData* save);
 void clock_apply_date_edit(int y, int m, int d, SaveData* save);
 void clock_reset(SaveData* save);
 void clock_reset_time(SaveData* save);
-bool clock_has_offset(void);
 
 /* Date calculation and formatting helpers */
 bool is_leap_year(int y);

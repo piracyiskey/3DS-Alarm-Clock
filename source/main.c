@@ -824,7 +824,7 @@ int main(int argc, char* argv[])
             } else if (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_EDIT_SAVE)) {
                 audio_stop();
                 if (is_new) {
-                    int new_idx = alarm_add(&save, edit_alarm_h, edit_alarm_m, edit_alarm_repeat, edit_alarm_tone, edit_alarm_label);
+                    int new_idx = alarm_add(&save, &alarm_sys, edit_alarm_h, edit_alarm_m, edit_alarm_repeat, edit_alarm_tone, edit_alarm_label);
                     if (new_idx >= 0) {
                         alarm_list_state.selected_index = new_idx;
                         alarm_calc_viewport_scroll(&alarm_list_state.scroll_y, new_idx);
@@ -852,6 +852,16 @@ int main(int argc, char* argv[])
                     }
 
                     alarm_sort(&save);
+                    if (alarm_sys.snooze.active) {
+                        for (int i = 0; i < save.alarm_count; i++) {
+                            if (save.alarms[i].hour == alarm_sys.snooze.original_hour &&
+                                save.alarms[i].minute == alarm_sys.snooze.original_minute &&
+                                strncmp(save.alarms[i].label, alarm_sys.snooze.label, ALARM_LABEL_LEN) == 0) {
+                                alarm_sys.snooze.parent_alarm_id = (u8)i;
+                                break;
+                            }
+                        }
+                    }
                     for (int i = 0; i < save.alarm_count; i++) {
                         if (save.alarms[i].hour == edit_alarm_h &&
                             save.alarms[i].minute == edit_alarm_m &&
@@ -918,6 +928,7 @@ int main(int argc, char* argv[])
                 is_settings  = true;
                 settings_sub = SET_MAIN;
                 show_timer_zero_modal = false;
+                show_delete_confirm = false;
                 nav_handled  = true;
             }
             /* Global Tab Navigation via Shoulder Buttons (L / R) with Circular Wrapping */
@@ -928,6 +939,7 @@ int main(int argc, char* argv[])
                 confirm_home_city_id = -1;
                 alert_home_city_id   = -1;
                 show_timer_zero_modal = false;
+                show_delete_confirm = false;
                 nav_handled = true;
             }
             else if ((kDown & KEY_R) && !(kHeld & KEY_L)) {
@@ -937,11 +949,13 @@ int main(int argc, char* argv[])
                 confirm_home_city_id = -1;
                 alert_home_city_id   = -1;
                 show_timer_zero_modal = false;
+                show_delete_confirm = false;
                 nav_handled = true;
             }
             /* Stylus Touch Navigation: Docked Tab Bar */
             else if (tDown && touch.py >= 200 && !(active_mode == MODE_CLOCK && clock_view == CLOCK_VIEW_PICKER)) {
                 show_timer_zero_modal = false;
+                show_delete_confirm = false;
                 if (touch_hit(touch.px, touch.py, &TAB_ALARM)) {
                     active_mode = MODE_ALARM;
                     clock_view = CLOCK_VIEW_LIST;
@@ -980,6 +994,7 @@ int main(int argc, char* argv[])
                 confirm_home_city_id = -1;
                 alert_home_city_id   = -1;
                 show_timer_zero_modal = false;
+                show_delete_confirm = false;
                 nav_handled  = true;
             }
 

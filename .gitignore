@@ -10,6 +10,7 @@ build/
 *.d
 *.bin
 *.lst
+*.map
 
 # Local assets
 assets/

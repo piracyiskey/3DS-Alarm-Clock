@@ -164,11 +164,11 @@ endif
 
 cia: all $(TARGET).cia
 
-$(BUILD)/banner.bnr: build_assets/banner.png build_assets/silent.wav | $(BUILD)
-	@bannertool makebanner -i build_assets/banner.png -a build_assets/silent.wav -o $@
+$(BUILD)/banner.bnr: build_assets/banner.png build_assets/banner.wav | $(BUILD)
+	@bannertool makebanner -i build_assets/banner.png -a build_assets/banner.wav -o $@
 
 $(TARGET).cia: $(TARGET).elf $(TARGET).smdh $(BUILD)/banner.bnr $(TARGET).rsf
-	@makerom -f cia -o $@ -elf $< -rsf $(TARGET).rsf -icon $(TARGET).smdh -banner $(BUILD)/banner.bnr -target t -exefslogo -ver 1
+	@makerom -f cia -o $@ -elf $< -rsf $(TARGET).rsf -icon $(TARGET).smdh -banner $(BUILD)/banner.bnr -target t -exefslogo -ver 2
 	@echo built ... $(notdir $@)
 
 #---------------------------------------------------------------------------------
