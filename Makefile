@@ -160,7 +160,16 @@ ifneq ($(ROMFS),)
 	export _3DSXFLAGS += --romfs=$(CURDIR)/$(ROMFS)
 endif
 
-.PHONY: all clean
+.PHONY: all clean cia
+
+cia: all $(TARGET).cia
+
+$(BUILD)/banner.bnr: build_assets/banner.png build_assets/silent.wav | $(BUILD)
+	@bannertool makebanner -i build_assets/banner.png -a build_assets/silent.wav -o $@
+
+$(TARGET).cia: $(TARGET).elf $(TARGET).smdh $(BUILD)/banner.bnr $(TARGET).rsf
+	@makerom -f cia -o $@ -elf $< -rsf $(TARGET).rsf -icon $(TARGET).smdh -banner $(BUILD)/banner.bnr -target t -exefslogo -ver 1
+	@echo built ... $(notdir $@)
 
 #---------------------------------------------------------------------------------
 all: $(BUILD) $(GFXBUILD) $(DEPSDIR) $(ROMFS_T3XFILES) $(T3XHFILES)
@@ -182,7 +191,7 @@ endif
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).3dsx $(OUTPUT).smdh $(TARGET).elf $(GFXBUILD)
+	@rm -fr $(BUILD) $(TARGET).3dsx $(OUTPUT).smdh $(TARGET).elf $(TARGET).cia $(GFXBUILD)
 
 #---------------------------------------------------------------------------------
 $(GFXBUILD)/%.t3x	$(BUILD)/%.h	:	%.t3s

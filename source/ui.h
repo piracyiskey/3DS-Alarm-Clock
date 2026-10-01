@@ -88,6 +88,7 @@ extern const HitRect BTN_ALARM_TONE_LEFT;
 extern const HitRect BTN_ALARM_TONE_RIGHT;
 extern const HitRect BTN_ALARM_TONE_PREVIEW;
 extern const HitRect BTN_ALARM_LABEL_INPUT;
+extern const HitRect BTN_ALARM_SNOOZE;
 extern const HitRect BTN_ALARM_DISMISS;
 extern const HitRect BTN_ALARM_MISSED_OK;
 extern const HitRect BTN_TIMER_DISMISS;
@@ -190,8 +191,8 @@ typedef struct {
 void ui_draw_alarm_list(C2D_TextBuf buf, SaveData* save, AlarmListState* state, C2D_Image settings_icon, C2D_Image trash_icon, C2D_Image add_icon);
 void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode, u8 ringtone_id, bool is_new, const char* ringtone_name, const char* label, bool is_playing);
 void ui_draw_alarm_delete_confirm(C2D_TextBuf buf);
-void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode, const char* label, u32 frame_counter);
-void ui_draw_alarm_ringing_bottom(C2D_TextBuf buf, int h, int m, u8 repeat_mode, const char* label);
+void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode, const char* label, u32 frame_counter, bool is_snooze);
+void ui_draw_alarm_ringing_bottom(C2D_TextBuf buf);
 void ui_draw_alarm_missed_modal(C2D_TextBuf buf, int missed_count);
 void ui_draw_world_clock_list(C2D_TextBuf buf, SaveData* save, WorldClockListState* state, C2D_Image settings_icon, C2D_Image trash_icon, C2D_Image add_icon);
 void ui_draw_city_picker(C2D_TextBuf buf, const SaveData* save, CityPickerState* state);

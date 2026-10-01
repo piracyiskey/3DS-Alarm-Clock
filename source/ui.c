@@ -109,7 +109,8 @@ const HitRect BTN_ALARM_TONE_RIGHT = {ALARM_SEL_BTN_RIGHT_X, ALARM_SEL_TONE_Y,
 const HitRect BTN_ALARM_TONE_PREVIEW = {ALARM_SEL_BOX_X, ALARM_SEL_TONE_Y,
                                         ALARM_SEL_BOX_W, ALARM_SEL_ROW_H};
 const HitRect BTN_ALARM_LABEL_INPUT = {96.0f, ALARM_SEL_LABEL_Y, 188.0f, 26.0f};
-const HitRect BTN_ALARM_DISMISS = {60.0f, 140.0f, 200.0f, 40.0f};
+const HitRect BTN_ALARM_SNOOZE = {40.0f, 49.0f, 240.0f, 84.0f};
+const HitRect BTN_ALARM_DISMISS = {40.0f, 149.0f, 240.0f, 42.0f};
 const HitRect BTN_ALARM_MISSED_OK = {60.0f, 140.0f, 200.0f, 40.0f};
 const HitRect BTN_TIMER_DISMISS = {60.0f, 140.0f, 200.0f, 40.0f};
 
@@ -1195,7 +1196,7 @@ void ui_draw_alarm_delete_confirm(C2D_TextBuf buf) {
 }
 
 void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
-                               const char *label, u32 frame_counter) {
+                               const char *label, u32 frame_counter, bool is_snooze) {
   C2D_DrawRectSolid(0, 0, 0, 400, 240, C2D_Color32(0x20, 0x00, 0x00, 0xFF));
 
   float scale = 2.0f + 0.1f * sinf(frame_counter * 0.05f);
@@ -1212,7 +1213,7 @@ void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
   C2D_DrawText(&t, C2D_WithColor, (400.0f - tw) / 2.0f, 85.0f, 0.0f, scale,
                scale, CLR_TEXT);
 
-  draw_text_centered_x(buf, "ALARM", 30.0f, 1.0f, 400.0f);
+  draw_text_centered_x(buf, is_snooze ? "SNOOZE" : "ALARM", 30.0f, 1.0f, 400.0f);
 
   const char *rep_str = "";
   switch (repeat_mode) {
@@ -1229,40 +1230,30 @@ void ui_draw_alarm_ringing_top(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
     rep_str = "Weekends";
     break;
   }
-  const char *status_str = (label && label[0] != '\0') ? label : rep_str;
-  draw_text_centered_x(buf, status_str, 175.0f, 0.7f, 400.0f);
+  char status_buf[64];
+  if (is_snooze) {
+    if (label && label[0] != '\0') {
+      snprintf(status_buf, sizeof(status_buf), "%s • Snooze", label);
+    } else {
+      snprintf(status_buf, sizeof(status_buf), "Snooze");
+    }
+  } else {
+    const char *status_str = (label && label[0] != '\0') ? label : rep_str;
+    snprintf(status_buf, sizeof(status_buf), "%s", status_str);
+  }
+  draw_text_centered_x(buf, status_buf, 175.0f, 0.7f, 400.0f);
 }
 
-void ui_draw_alarm_ringing_bottom(C2D_TextBuf buf, int h, int m,
-                                  u8 repeat_mode, const char *label) {
+void ui_draw_alarm_ringing_bottom(C2D_TextBuf buf) {
   C2D_DrawRectSolid(0, 0, 0, 320, 240, CLR_OVERLAY);
   C2D_DrawRectSolid(20, 20, 0, 280, 200, CLR_MODAL_BG);
 
-  draw_text_centered_x(buf, "ALARM", 35.0f, 0.9f, 320.0f);
+  /* Amber Snooze button above Dismiss button, twice as big as Dismiss */
+  draw_button_scaled(buf, &BTN_ALARM_SNOOZE, "SNOOZE", 0.95f,
+                     C2D_Color32(0xD0, 0x8A, 0x18, 0xFF));
 
-  char time_str[16];
-  snprintf(time_str, sizeof(time_str), "%02d:%02d", h, m);
-  draw_text_centered_x(buf, time_str, 65.0f, 1.4f, 320.0f);
-
-  const char *rep_str = "";
-  switch (repeat_mode) {
-  case REPEAT_ONCE:
-    rep_str = "Once";
-    break;
-  case REPEAT_DAILY:
-    rep_str = "Daily";
-    break;
-  case REPEAT_WEEKDAYS:
-    rep_str = "Weekdays";
-    break;
-  case REPEAT_WEEKENDS:
-    rep_str = "Weekends";
-    break;
-  }
-  const char *status_str = (label && label[0] != '\0') ? label : rep_str;
-  draw_text_centered_x(buf, status_str, 105.0f, 0.6f, 320.0f);
-
-  draw_button_scaled(buf, &BTN_ALARM_DISMISS, "DISMISS", 0.70f,
+  /* Dismiss button below */
+  draw_button_scaled(buf, &BTN_ALARM_DISMISS, "DISMISS", 0.65f,
                      C2D_Color32(0x8A, 0x24, 0x24, 0xFF));
 }
 

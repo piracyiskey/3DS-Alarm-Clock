@@ -28,6 +28,18 @@ typedef struct {
 
 _Static_assert(sizeof(AlarmEntry) == 40, "AlarmEntry must be exactly 40 bytes");
 
+typedef struct {
+    bool active;                 /* Is a snooze currently ticking down? */
+    u64  deadline_ms;            /* Real monotonic deadline (osGetTime() + 540000ULL) */
+    s64  target_display_epoch;   /* Target display epoch (seconds) for telemetry and scheduling */
+    u8   parent_alarm_id;        /* Index in save->alarms */
+    u8   ringtone_id;            /* Ringtone to play when snooze rings */
+    u8   repeat_mode;            /* Original repeat mode */
+    u8   original_hour;          /* Original alarm hour */
+    u8   original_minute;        /* Original alarm minute */
+    char label[ALARM_LABEL_LEN]; /* Cached label */
+} AlarmSnooze;
+
 typedef enum {
     ALARM_STATE_IDLE,     /* No alarm currently ringing */
     ALARM_STATE_RINGING   /* One or more alarms are actively firing */
@@ -47,17 +59,25 @@ typedef struct {
     bool missed_alarm;
     int  missed_count;
     u32  ring_frames;
+
+    /* Snooze subsystem */
+    AlarmSnooze snooze;
+    int  latest_ringing_idx;   /* Most recently triggered alarm index */
+    bool is_snooze_ring;       /* True if current ringing state was triggered by a snooze */
 } AlarmSystem;
 
 struct SaveData;
 
 int  alarm_add(struct SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id, const char* label);
-void alarm_delete(struct SaveData* save, int index);
+void alarm_delete(struct SaveData* save, AlarmSystem* sys, int index);
 void alarm_sort(struct SaveData* save);
 
 void alarm_sys_init(AlarmSystem* sys);
 s64  alarm_calc_next_fire_epoch(s64 now_epoch, const AlarmEntry* alarm);
 void alarm_tick(struct SaveData* save, AlarmSystem* sys);
+void alarm_snooze(struct SaveData* save, AlarmSystem* sys);
+void alarm_snooze_clear(AlarmSystem* sys);
+void alarm_cancel_snooze_if_parent(AlarmSystem* sys, int alarm_idx);
 void alarm_dismiss_all(struct SaveData* save, AlarmSystem* sys);
 void alarm_check_startup_missed(struct SaveData* save, AlarmSystem* sys, s64 now);
 

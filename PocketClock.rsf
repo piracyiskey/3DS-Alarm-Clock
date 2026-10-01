@@ -1,0 +1,144 @@
+BasicInfo:
+  Title : "PocketClock"
+  CompanyCode : "00"
+  ProductCode : "CTR-P-PKCK"
+  ContentType : Application
+  Logo : Nintendo
+
+TitleInfo:
+  UniqueId : 0xF8055
+  Category : Application
+
+Option:
+  UseOnSD : true
+  EnableCompress : true
+  FreeProductCode : true
+  EnableCrypt : false
+  MediaFootPadding : false
+
+AccessControlInfo:
+  CoreVersion                   : 2
+  DescVersion                   : 2
+
+  IdealProcessor                : 0
+  AffinityMask                  : 1
+  Priority                      : 16
+
+  DisableDebug                  : true
+  EnableForceDebug              : false
+  CanWriteSharedPage            : true
+  CanUsePrivilegedPriority      : false
+  CanUseNonAlphabetAndNumber    : true
+  PermitMainFunctionArgument    : true
+  CanShareDeviceMemory          : true
+  RunnableOnSleep               : false
+  SpecialMemoryArrange          : false
+
+  HandleTableSize               : 512
+  MemoryType                    : Application
+
+  FileSystemAccess:
+    - DirectSdmc
+    - DirectSdmcWrite
+
+  MemoryMapping:
+    - 1f000000-1f5fffff:r
+
+  IORegisterMapping:
+    - 1ff00000-1ff7ffff
+
+  ServiceAccessControl:
+    - APT:U
+    - ac:u
+    - am:net
+    - boss:U
+    - cam:u
+    - cecd:u
+    - cfg:nor
+    - cfg:u
+    - csnd:SND
+    - dsp::DSP
+    - frd:u
+    - fs:USER
+    - gsp::Gpu
+    - gsp::Lcd
+    - hid:USER
+    - http:C
+    - mcu::HWC
+    - mic:u
+    - ndm:u
+    - news:u
+    - nwm::UDS
+    - ptm:sysm
+    - ptm:u
+    - pxi:dev
+    - soc:U
+    - ssl:C
+
+  SystemCallAccess:
+    ControlMemory: 0x01
+    QueryMemory: 0x02
+    ExitProcess: 0x03
+    GetProcessAffinityMask: 0x04
+    SetProcessAffinityMask: 0x05
+    GetProcessIdealProcessor: 0x06
+    SetProcessIdealProcessor: 0x07
+    CreateThread: 0x08
+    ExitThread: 0x09
+    SleepThread: 0x0A
+    GetThreadPriority: 0x0B
+    SetThreadPriority: 0x0C
+    GetThreadAffinityMask: 0x0D
+    SetThreadAffinityMask: 0x0E
+    GetThreadIdealProcessor: 0x0F
+    SetThreadIdealProcessor: 0x10
+    GetProcessorID: 0x11
+    ClearEvent: 0x12
+    CreateEvent: 0x13
+    SignalEvent: 0x14
+    ClearTimer: 0x15
+    CreateTimer: 0x16
+    SetTimer: 0x17
+    CancelTimer: 0x18
+    ClearTimer2: 0x19
+    CreateMemoryBlock: 0x1A
+    MapMemoryBlock: 0x1B
+    UnmapMemoryBlock: 0x1C
+    CreateAddressArbiter: 0x1D
+    ArbitrateAddress: 0x1E
+    CloseHandle: 0x1F
+    WaitSynchronization1: 0x20
+    WaitSynchronizationN: 0x21
+    SignalAndWait: 0x22
+    DuplicateHandle: 0x23
+    GetSystemTick: 0x24
+    GetHandleInfo: 0x25
+    GetSystemInfo: 0x26
+    GetProcessInfo: 0x27
+    GetThreadInfo: 0x28
+    ConnectToPort: 0x29
+    SendSyncRequest1: 0x2A
+    SendSyncRequest2: 0x2B
+    SendSyncRequest3: 0x2C
+    SendSyncRequest4: 0x2D
+    SendSyncRequest: 0x2E
+    OpenProcess: 0x2F
+    OpenThread: 0x30
+    GetProcessId: 0x31
+    GetProcessIdOfThread: 0x32
+    GetThreadId: 0x33
+    ResourceLimitGetValues: 0x34
+    ResourceLimitGetLimitValues: 0x35
+    GetResourceLimit: 0x36
+    GetProcessResourceLimit: 0x37
+    GetProcessList: 0x38
+    GetThreadList: 0x39
+    CreateResourceLimit: 0x3A
+    SetResourceLimitValues: 0x3B
+    Break: 0x3C
+    OutputDebugString: 0x3D
+    ControlPerformanceCounter: 0x3E
+
+SystemControlInfo:
+  SaveDataSize: 0KB
+  StackSize: 0x40000

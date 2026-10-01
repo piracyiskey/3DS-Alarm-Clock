@@ -270,7 +270,16 @@ static void step_date_col(int col, int delta, int* y, int* m, int* d, DateFormat
     }
 }
 
-static void alarm_toggle_entry(SaveData* save, int idx)
+static void update_snooze_display_epoch(AlarmSystem* sys)
+{
+    if (sys && sys->snooze.active) {
+        u64 now_ms = (u64)osGetTime();
+        s64 rem_s = (sys->snooze.deadline_ms > now_ms) ? (s64)((sys->snooze.deadline_ms - now_ms) / 1000ULL) : 0;
+        sys->snooze.target_display_epoch = get_display_time_seconds() + rem_s;
+    }
+}
+
+static void alarm_toggle_entry(SaveData* save, AlarmSystem* sys, int idx)
 {
     if (!save || idx < 0 || idx >= save->alarm_count) return;
     save->alarms[idx].enabled = !save->alarms[idx].enabled;
@@ -286,6 +295,8 @@ static void alarm_toggle_entry(SaveData* save, int idx)
         } else {
             save->alarms[idx].last_fired_epoch = today_fire - 86400LL;
         }
+    } else {
+        alarm_cancel_snooze_if_parent(sys, idx);
     }
     save_write(save);
 }
@@ -561,8 +572,10 @@ int main(int argc, char* argv[])
             }
         }
         else if (alarm_sys.state == ALARM_STATE_RINGING) {
-            /* Ringing overlay dismiss */
-            if ((kDown & (KEY_A | KEY_B)) || (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_DISMISS))) {
+            /* Ringing overlay controls: Snooze (KEY_A / BTN_ALARM_SNOOZE) vs Dismiss (KEY_B / BTN_ALARM_DISMISS) */
+            if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_SNOOZE))) {
+                alarm_snooze(&save, &alarm_sys);
+            } else if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_ALARM_DISMISS))) {
                 alarm_dismiss_all(&save, &alarm_sys);
             }
         }
@@ -646,6 +659,7 @@ int main(int argc, char* argv[])
             case SET_CONFIRM_RESET:
                 if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_CONFIRM))) {
                     clock_reset(&save);
+                    update_snooze_display_epoch(&alarm_sys);
                     save_msg = "Reset to system time & date!";
                     settings_sub = SET_SAVE_OK;
                 } else if ((kDown & KEY_B) || (tDown && touch_hit(touch.px, touch.py, &BTN_CANCEL))) {
@@ -656,6 +670,7 @@ int main(int argc, char* argv[])
             case SET_CONFIRM_RESET_TIME:
                 if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_CONFIRM))) {
                     clock_reset_time(&save);
+                    update_snooze_display_epoch(&alarm_sys);
                     clock_get_hms(&edit_h, &edit_m, &edit_s);
                     save_msg = "Time reset to system time!";
                     settings_sub = SET_SAVE_OK;
@@ -670,6 +685,7 @@ int main(int argc, char* argv[])
                     settings_sub = SET_TIME_DATE_MENU;
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_SAVE)) {
                     clock_apply_time_edit(edit_h, edit_m, edit_s, &save);
+                    update_snooze_display_epoch(&alarm_sys);
                     save_msg = "Time saved successfully!";
                     settings_sub = SET_SAVE_OK;
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_RESET_TIME)) {
@@ -698,6 +714,7 @@ int main(int argc, char* argv[])
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_SET_SAVE)) {
                     save.date_format = (u8)edit_fmt;
                     clock_apply_date_edit(edit_y, edit_mo, edit_d, &save);
+                    update_snooze_display_epoch(&alarm_sys);
                     save_msg = "Date saved successfully!";
                     settings_sub = SET_SAVE_OK;
                 } else if (tDown && touch_hit(touch.px, touch.py, &BTN_FMT_LEFT)) {
@@ -813,6 +830,7 @@ int main(int argc, char* argv[])
                         alarm_calc_viewport_scroll(&alarm_list_state.scroll_y, new_idx);
                     }
                 } else if (edit_alarm_idx >= 0 && edit_alarm_idx < save.alarm_count) {
+                    alarm_cancel_snooze_if_parent(&alarm_sys, edit_alarm_idx);
                     save.alarms[edit_alarm_idx].hour = edit_alarm_h;
                     save.alarms[edit_alarm_idx].minute = edit_alarm_m;
                     save.alarms[edit_alarm_idx].repeat_mode = edit_alarm_repeat;
@@ -1190,7 +1208,7 @@ int main(int argc, char* argv[])
                             show_delete_confirm = false;
                         } else if ((kDown & KEY_A) || (tDown && touch_hit(touch.px, touch.py, &BTN_CONFIRM))) {
                             if (edit_alarm_idx >= 0 && edit_alarm_idx < save.alarm_count) {
-                                alarm_delete(&save, edit_alarm_idx);
+                                alarm_delete(&save, &alarm_sys, edit_alarm_idx);
                                 if (alarm_list_state.selected_index >= save.alarm_count) {
                                     alarm_list_state.selected_index = save.alarm_count - 1;
                                 }
@@ -1206,7 +1224,7 @@ int main(int argc, char* argv[])
                             }
                         } else if (kDown & KEY_Y) {
                             if (save.alarm_count > 0 && alarm_list_state.selected_index >= 0 && alarm_list_state.selected_index < save.alarm_count) {
-                                alarm_toggle_entry(&save, alarm_list_state.selected_index);
+                                alarm_toggle_entry(&save, &alarm_sys, alarm_list_state.selected_index);
                             }
                         } else if (kDown & KEY_A && alarm_list_state.selected_index >= 0 && alarm_list_state.selected_index < save.alarm_count) {
                             edit_alarm_idx = alarm_list_state.selected_index;
@@ -1294,7 +1312,7 @@ int main(int argc, char* argv[])
                                 int idx = alarm_list_state.candidate_index;
                                 if (idx >= 0 && idx < save.alarm_count) {
                                     if (alarm_list_state.candidate_is_toggle) {
-                                        alarm_toggle_entry(&save, idx);
+                                        alarm_toggle_entry(&save, &alarm_sys, idx);
                                     } else if (alarm_list_state.candidate_is_delete) {
                                         edit_alarm_idx = idx;
                                         alarm_list_state.selected_index = idx;
@@ -1385,8 +1403,23 @@ int main(int argc, char* argv[])
         C2D_SceneBegin(top);
 
         if (alarm_sys.state == ALARM_STATE_RINGING) {
-            int first_ringing = __builtin_ctz(alarm_sys.ringing_mask);
-            ui_draw_alarm_ringing_top(textBuf, save.alarms[first_ringing].hour, save.alarms[first_ringing].minute, save.alarms[first_ringing].repeat_mode, save.alarms[first_ringing].label, alarm_sys.ring_frames);
+            int ring_idx = alarm_sys.latest_ringing_idx;
+            if (ring_idx < 0 || ring_idx >= save.alarm_count || !(alarm_sys.ringing_mask & (1U << ring_idx))) {
+                if (alarm_sys.ringing_mask != 0) {
+                    ring_idx = __builtin_ctz(alarm_sys.ringing_mask);
+                } else {
+                    ring_idx = 0;
+                }
+            }
+            if (alarm_sys.is_snooze_ring) {
+                ui_draw_alarm_ringing_top(textBuf, alarm_sys.snooze.original_hour, alarm_sys.snooze.original_minute,
+                                          alarm_sys.snooze.repeat_mode, alarm_sys.snooze.label,
+                                          alarm_sys.ring_frames, true);
+            } else {
+                ui_draw_alarm_ringing_top(textBuf, save.alarms[ring_idx].hour, save.alarms[ring_idx].minute,
+                                          save.alarms[ring_idx].repeat_mode, save.alarms[ring_idx].label,
+                                          alarm_sys.ring_frames, false);
+            }
             alarm_sys.ring_frames++;
         } else if (timer_ringing) {
             ui_draw_timer_ringing_top(textBuf, tmr.target_h, tmr.target_m, tmr.target_s, timer_ring_frames);
@@ -1424,7 +1457,19 @@ int main(int argc, char* argv[])
             }
 
             char alarm_status_str[64];
-            if (next_idx != -1) {
+            if (alarm_sys.snooze.active && (next_fire == -1 || alarm_sys.snooze.target_display_epoch <= next_fire)) {
+                int snz_tod = (int)(alarm_sys.snooze.target_display_epoch % 86400);
+                if (snz_tod < 0) snz_tod += 86400;
+                int snz_h = snz_tod / 3600;
+                int snz_m = (snz_tod % 3600) / 60;
+                if (alarm_sys.snooze.label[0] != '\0') {
+                    snprintf(alarm_status_str, sizeof(alarm_status_str), "Next alarm - %02d:%02d (%s - Snooze)",
+                             snz_h, snz_m, alarm_sys.snooze.label);
+                } else {
+                    snprintf(alarm_status_str, sizeof(alarm_status_str), "Next alarm - %02d:%02d (Snooze)",
+                             snz_h, snz_m);
+                }
+            } else if (next_idx != -1) {
                 if (save.alarms[next_idx].label[0] != '\0') {
                     snprintf(alarm_status_str, sizeof(alarm_status_str), "Next alarm - %02d:%02d (%s)",
                              save.alarms[next_idx].hour, save.alarms[next_idx].minute, save.alarms[next_idx].label);
@@ -1469,8 +1514,7 @@ int main(int argc, char* argv[])
             C2D_SceneBegin(bot);
 
             if (alarm_sys.state == ALARM_STATE_RINGING) {
-                int first_ringing = __builtin_ctz(alarm_sys.ringing_mask);
-                ui_draw_alarm_ringing_bottom(textBuf, save.alarms[first_ringing].hour, save.alarms[first_ringing].minute, save.alarms[first_ringing].repeat_mode, save.alarms[first_ringing].label);
+                ui_draw_alarm_ringing_bottom(textBuf);
             } else if (timer_ringing) {
                 ui_draw_timer_ringing_bottom(textBuf, tmr.target_h, tmr.target_m, tmr.target_s);
             } else if (alarm_sys.missed_alarm) {

@@ -92,6 +92,7 @@ static const ManualLine s_lines_page_1[] = {
     {ML_BULLET, "[Y]            : Quick toggle alarm On / Off"},
     {ML_BULLET, "[X] / Red [X]  : Delete selected alarm"},
     {ML_BULLET, "[+] Header     : Add a new alarm (up to 32 alarms)"},
+    {ML_BULLET, "When Ringing   : [A] to Snooze (9 min), [B] to Dismiss"},
     {ML_SPACER, NULL},
     {ML_SUBHEADER, "World Clock Tab"},
     {ML_BULLET, "D-Pad / Circle Pad : Scroll through cities"},

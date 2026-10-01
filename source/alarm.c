@@ -2,6 +2,7 @@
 #include "save.h"
 #include "clock.h"
 #include "audio.h"
+#include <3ds.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -85,8 +86,17 @@ int alarm_add(SaveData* save, u8 hour, u8 minute, u8 repeat_mode, u8 ringtone_id
     return insert_idx;
 }
 
-void alarm_delete(SaveData* save, int index) {
+void alarm_delete(SaveData* save, AlarmSystem* sys, int index) {
     if (!save || index < 0 || index >= MAX_ALARMS) return;
+
+    if (sys && sys->snooze.active) {
+        if (index == sys->snooze.parent_alarm_id) {
+            alarm_snooze_clear(sys);
+        } else if (index < sys->snooze.parent_alarm_id) {
+            sys->snooze.parent_alarm_id--;
+        }
+    }
+
     if (save->alarms[index].id != ALARM_INVALID) {
         save->alarm_count--;
         
@@ -110,6 +120,20 @@ void alarm_delete(SaveData* save, int index) {
     }
 }
 
+void alarm_snooze_clear(AlarmSystem* sys) {
+    if (!sys) return;
+    memset(&sys->snooze, 0, sizeof(sys->snooze));
+    sys->snooze.active = false;
+    sys->snooze.parent_alarm_id = ALARM_INVALID;
+}
+
+void alarm_cancel_snooze_if_parent(AlarmSystem* sys, int alarm_idx) {
+    if (!sys || !sys->snooze.active) return;
+    if (sys->snooze.parent_alarm_id == alarm_idx) {
+        alarm_snooze_clear(sys);
+    }
+}
+
 void alarm_sys_init(AlarmSystem* sys) {
     if (sys) {
         sys->ringing_mask = 0;
@@ -119,6 +143,9 @@ void alarm_sys_init(AlarmSystem* sys) {
         sys->missed_alarm = false;
         sys->missed_count = 0;
         sys->ring_frames = 0;
+        sys->latest_ringing_idx = -1;
+        sys->is_snooze_ring = false;
+        alarm_snooze_clear(sys);
     }
 }
 
@@ -168,6 +195,11 @@ static void alarm_check_missed(SaveData* save, AlarmSystem* sys, s64 prev, s64 n
                 if (alarm->last_fired_epoch < (u64)expected) {
                     alarm->last_fired_epoch = (u64)expected;
                     sys->ringing_mask |= (1U << i);
+                    sys->latest_ringing_idx = i;
+                    sys->is_snooze_ring = false;
+                    if (sys->snooze.active) {
+                        alarm_snooze_clear(sys);
+                    }
                     if (sys->state == ALARM_STATE_IDLE) {
                         sys->state = ALARM_STATE_RINGING;
                         sys->ring_start_epoch = now;
@@ -207,6 +239,9 @@ void alarm_tick(SaveData* save, AlarmSystem* sys) {
         alarm_check_missed(save, sys, prev_app_time, now);
     }
     
+    bool scheduled_alarm_triggered = false;
+    
+    /* Priority 1: Check scheduled alarms */
     for (int i = 0; i < save->alarm_count; i++) {
         AlarmEntry* alarm = &save->alarms[i];
         if (!alarm->enabled) continue;
@@ -227,6 +262,15 @@ void alarm_tick(SaveData* save, AlarmSystem* sys) {
             if (alarm->last_fired_epoch < (u64)today_fire_epoch) {
                 alarm->last_fired_epoch = (u64)today_fire_epoch;
                 sys->ringing_mask |= (1U << i);
+                sys->latest_ringing_idx = i;
+                sys->is_snooze_ring = false;
+                scheduled_alarm_triggered = true;
+                
+                /* Rule 1 & Rule 3: Scheduled alarm wipes out any background snooze */
+                if (sys->snooze.active) {
+                    alarm_snooze_clear(sys);
+                }
+                
                 printf("ALARM %d TRIGGERED!\n", i);
                 if (sys->state == ALARM_STATE_IDLE) {
                     sys->state = ALARM_STATE_RINGING;
@@ -245,6 +289,26 @@ void alarm_tick(SaveData* save, AlarmSystem* sys) {
         }
     }
     
+    /* Priority 2: Check snooze expiration if no scheduled alarm triggered and idle */
+    if (!scheduled_alarm_triggered && sys->state == ALARM_STATE_IDLE && sys->snooze.active) {
+        u64 now_ms = (u64)osGetTime();
+        if (now_ms >= sys->snooze.deadline_ms) {
+            sys->state = ALARM_STATE_RINGING;
+            sys->is_snooze_ring = true;
+            sys->ring_start_epoch = now;
+            sys->active_ringtone_id = sys->snooze.ringtone_id;
+            sys->latest_ringing_idx = sys->snooze.parent_alarm_id;
+            if (sys->snooze.parent_alarm_id < save->alarm_count) {
+                sys->ringing_mask = (1U << sys->snooze.parent_alarm_id);
+            } else {
+                sys->ringing_mask = 1U;
+            }
+            audio_play(sys->active_ringtone_id);
+            sys->snooze.active = false; /* Expired into active ringing */
+        }
+    }
+    
+    /* 10-Minute Auto-Silence Safeguard: Auto-dismisses without snoozing */
     if (sys->state == ALARM_STATE_RINGING && (now - sys->ring_start_epoch >= 600)) {
         alarm_dismiss_all(save, sys);
     }
@@ -252,8 +316,64 @@ void alarm_tick(SaveData* save, AlarmSystem* sys) {
     prev_app_time = now;
 }
 
+void alarm_snooze(SaveData* save, AlarmSystem* sys) {
+    if (!save || !sys || sys->state != ALARM_STATE_RINGING) return;
+    
+    int target_idx = sys->latest_ringing_idx;
+    if (target_idx < 0 || target_idx >= save->alarm_count || !(sys->ringing_mask & (1U << target_idx))) {
+        if (sys->ringing_mask != 0) {
+            target_idx = __builtin_ctz(sys->ringing_mask);
+        } else {
+            target_idx = 0;
+        }
+    }
+    
+    s64 now = get_display_time_seconds();
+    sys->snooze.active = true;
+    sys->snooze.deadline_ms = (u64)osGetTime() + 9 * 60 * 1000ULL;
+    sys->snooze.target_display_epoch = now + 540;
+    sys->snooze.parent_alarm_id = (u8)target_idx;
+    
+    if (target_idx >= 0 && target_idx < save->alarm_count) {
+        sys->snooze.ringtone_id = save->alarms[target_idx].ringtone_id;
+        sys->snooze.repeat_mode = save->alarms[target_idx].repeat_mode;
+        sys->snooze.original_hour = save->alarms[target_idx].hour;
+        sys->snooze.original_minute = save->alarms[target_idx].minute;
+        snprintf(sys->snooze.label, sizeof(sys->snooze.label), "%s", save->alarms[target_idx].label);
+    } else {
+        sys->snooze.ringtone_id = 0;
+        sys->snooze.repeat_mode = REPEAT_DAILY;
+        sys->snooze.original_hour = 0;
+        sys->snooze.original_minute = 0;
+        sys->snooze.label[0] = '\0';
+    }
+    
+    /* Dismiss older concurrent alarms in mask, if any */
+    for (int i = 0; i < save->alarm_count; i++) {
+        if (i != target_idx && (sys->ringing_mask & (1U << i))) {
+            if (save->alarms[i].repeat_mode == REPEAT_ONCE) {
+                save->alarms[i].enabled = false;
+            }
+        }
+    }
+    
+    sys->ringing_mask = 0;
+    sys->state = ALARM_STATE_IDLE;
+    sys->is_snooze_ring = false;
+    sys->latest_ringing_idx = -1;
+    audio_stop();
+    save_write(save);
+}
+
 void alarm_dismiss_all(SaveData* save, AlarmSystem* sys) {
     if (!save || !sys) return;
+    
+    /* If this was a snoozed one-time alarm, disable it now upon final dismissal */
+    if (sys->is_snooze_ring && sys->snooze.parent_alarm_id < save->alarm_count) {
+        if (save->alarms[sys->snooze.parent_alarm_id].repeat_mode == REPEAT_ONCE) {
+            save->alarms[sys->snooze.parent_alarm_id].enabled = false;
+        }
+    }
     
     for (int i = 0; i < save->alarm_count; i++) {
         if (sys->ringing_mask & (1U << i)) {
@@ -263,8 +383,11 @@ void alarm_dismiss_all(SaveData* save, AlarmSystem* sys) {
         }
     }
     
+    alarm_snooze_clear(sys);
     sys->ringing_mask = 0;
     sys->state = ALARM_STATE_IDLE;
+    sys->is_snooze_ring = false;
+    sys->latest_ringing_idx = -1;
     audio_stop();
     save_write(save);
 }
