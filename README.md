@@ -1,12 +1,10 @@
-# PocketClock — A powerful Clock App for Nintendo 3DS
+# PocketClock - A powerful Clock App for Nintendo 3DS
 
 <p align="center">
   <img src="build_assets/big_ban.png" alt="PocketClock Banner" width="600" />
 </p>
 
 **PocketClock** is a native, dual-screen clock application inspired by modern smartphone built-in clock apps, engineered specifically for the Nintendo 3DS homebrew ecosystem. Featuring an alarm clock, world clock, stopwatch, and countdown timer with a familiar, user-friendly interface and advanced power management. 
-
----
 
 ## Screenshots
 
@@ -41,8 +39,6 @@
 <em> All screenshots were taken on Azahar Emulator, The quality is much better on real hardware.</em>
 
 </details>
-
----
 
 ## Features
 
@@ -84,8 +80,6 @@
 * **Wake Preemption Safeguard:** LCD backlights automatically power back on the instant an alarm or timer fires. Screens never turn off while ringing.
 * **Audio Jack Support:** If headphones or an external speaker are plugged in, you can close the 3DS lid without the app going to sleep, allowing alarms to ring while closed. If unplugged, the console enters standard sleep to protect battery life.
 
----
-
 ## Controls
 
 PocketClock features dual-input: Every action can be performed via touchscreen and some actions with physical buttons.
@@ -96,12 +90,12 @@ PocketClock features dual-input: Every action can be performed via touchscreen a
 | **Night Standby (Screens Off)** | <kbd>L + R</kbd> (Simultaneous) | Configurable via Display Settings |
 | **Wake Screens from Standby** | Any D-Pad / Face Button | Tap touchscreen |
 | **Open Settings** | <kbd>SELECT</kbd> | Tap gear icon in top-left header |
-| **Save & Exit** | <kbd>START</kbd> | — |
+| **Save & Exit** | <kbd>START</kbd> | -- |
 | **Alarm List: Scroll** | <kbd>D-Pad Up / Down</kbd> or <kbd>Circle Pad</kbd> | Touch & drag card list |
 | **Alarm List: Edit** | <kbd>A</kbd> | Tap alarm card body |
 | **Alarm List: Quick Toggle** | <kbd>Y</kbd> | Tap square enable checkbox |
 | **Alarm List: Delete** | <kbd>X</kbd> (with modal confirmation) | Tap `[🗑]` trash button |
-| **Alarm List: Add New** | — | Tap `[+]` button in header |
+| **Alarm List: Add New** | -- | Tap `[+]` button in header |
 | **Ringing Alarm: Snooze** | <kbd>A</kbd> | Tap `[SNOOZE]` button |
 | **Ringing Alarm: Dismiss** | <kbd>B</kbd> | Tap `[DISMISS]` button |
 | **World Clock: Set Home City** | <kbd>A</kbd> | Tap city card |
@@ -116,13 +110,11 @@ PocketClock features dual-input: Every action can be performed via touchscreen a
 | **In-App Manual: Page Flip** | <kbd>L</kbd> / <kbd>R</kbd> | Tap `◄` / `►` stepper buttons |
 | **In-App Manual: Scroll** | <kbd>D-Pad</kbd> / <kbd>Circle Pad</kbd> | Touch & drag content area |
 
----
-
 ## Installation
 
 PocketClock is distributed in both `.cia` (installable title) and `.3dsx` (Homebrew Launcher) formats.
 
-### Method 1: Installable CIA (`PocketClock.cia`) — Recommended
+### Method 1: Installable CIA (`PocketClock.cia`) - Recommended
 1. Copy `PocketClock.cia` to your SD card.
 2. Open **FBI** on your Nintendo 3DS.
 3. Navigate to `SD` $\to$ locate `PocketClock.cia` $\to$ select **Install and delete CIA**.
@@ -137,8 +129,6 @@ PocketClock is distributed in both `.cia` (installable title) and `.3dsx` (Homeb
    3dslink PocketClock.3dsx -a <3DS_IP_ADDRESS> -s
    ```
 
----
-
 ## Recommended Overnight Setup
 
 To guarantee that your Nintendo 3DS functions as a reliable alarm clock:
@@ -152,8 +142,6 @@ To guarantee that your Nintendo 3DS functions as a reliable alarm clock:
    * Press <kbd>L</kbd> + <kbd>D-Pad Down</kbd> + <kbd>SELECT</kbd> to open the Luma3DS Rosalina menu.
    * Navigate to `System Configuration` $\to$ `Toggle LEDs`.
 
----
-
 ## Limitations
 
 * **No Background Execution Outside App:** The 3DS operating system suspends homebrew applications whenever the <kbd>HOME</kbd> button is pressed or another title is opened. PocketClock must remain open to trigger alarms.
@@ -163,8 +151,6 @@ To guarantee that your Nintendo 3DS functions as a reliable alarm clock:
   * **Analog Volume Slider Reality:** The 3DS physical volume slider is an analog control wired directly to the speaker amplifier. Software cannot amplify past this physical limit. PocketClock guides users to set the volume slider to maximum and provides an audio preview in the editor to test volume levels. You can try override the volume via Rosalina Menu. 
   * **Safe Sleep & Battery Preservation:** Rather than forcing the console to stay awake when the lid is closed (which drains battery into muted internal speakers), PocketClock allows standard sleep when headphones are unplugged.
 * **Console Clock Safety:** Adjusting the time or date inside PocketClock modifies internal display offsets only; it **never** alters the 3DS console's system clock. Games with time-penalty mechanics (*Animal Crossing*, *Pokémon*, etc.) remain completely unaffected. Therefore, you can use this app to keep track of the current time if you need to change the 3DS system clock for any reason.
-
----
 
 ## Building from Source
 
@@ -197,12 +183,10 @@ You can build the project using the MSYS2 GNU Make executable included with devk
 
 ### 4. Build Outputs
 Upon a successful build, the following artifacts are generated:
-* `PocketClock.3dsx` — Homebrew Launcher executable. 
+* `PocketClock.3dsx` - Homebrew Launcher executable. 
 * `PocketClock.cia` - Installable title.
-* `PocketClock.elf` — Executable and Linkable Format binary.
-* `PocketClock.smdh` — Title metadata and icon container.
-
----
+* `PocketClock.elf` - Executable and Linkable Format binary.
+* `PocketClock.smdh` - Title metadata and icon container.
 
 ## Credits
 

@@ -7,7 +7,7 @@
 /* Hit rectangle for touch input */
 typedef struct { float x, y, w, h; } HitRect;
 
-/* Color palette — dark grey background, white text */
+/* Color palette - dark grey background, white text */
 #define CLR_BG          C2D_Color32(0x30, 0x30, 0x30, 0xFF)
 #define CLR_TEXT        C2D_Color32(0xFF, 0xFF, 0xFF, 0xFF)
 #define CLR_TEXT_DIM    C2D_Color32(0x99, 0x99, 0x99, 0xFF)
@@ -145,11 +145,11 @@ void ui_draw_top_clock_with_alarm_status(C2D_TextBuf buf, int h, int m, int s, c
 void ui_draw_top_stopwatch(C2D_TextBuf buf, const Stopwatch* sw, int hh, int mm, int ss, int cs, bool show_hours);
 void ui_draw_top_timer(C2D_TextBuf buf, int hh, int mm, int ss);
 
-/* Bottom screen — Header & Navigation */
+/* Bottom screen - Header & Navigation */
 void ui_draw_header(C2D_TextBuf buf, C2D_Image settings_icon, const char* title);
 void ui_draw_tab_bar(C2D_TextBuf buf, AppMode active, const C2D_Image tab_icons[4]);
 
-/* Bottom screen — Tab modes */
+/* Bottom screen - Tab modes */
 typedef struct {
     float scroll_y;
     float touch_start_y;
@@ -210,7 +210,7 @@ void ui_draw_timer_paused(C2D_TextBuf buf);
 void ui_draw_timer_ringing_top(C2D_TextBuf buf, int h, int m, int s, u32 frame_counter);
 void ui_draw_timer_ringing_bottom(C2D_TextBuf buf, int h, int m, int s);
 
-/* Bottom screen — Settings overlay screens */
+/* Bottom screen - Settings overlay screens */
 void ui_draw_settings_main(C2D_TextBuf buf);
 void ui_draw_settings_time_date_menu(C2D_TextBuf buf);
 void ui_draw_settings_edit_time(C2D_TextBuf buf, int h, int m, int s);

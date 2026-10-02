@@ -60,7 +60,7 @@ const HitRect TAB_TIMER = {240.0f, 200.0f, 80.0f, 40.0f};
 /* Global header bar hit target (top-right corner) */
 const HitRect BTN_SETTINGS_ICON = {280.0f, 0.0f, 40.0f, 32.0f};
 
-/* Time arrows & buttons — 3 columns: Hour, Minute, Second. Total width 172px, centered at x=74 */
+/* Time arrows & buttons - 3 columns: Hour, Minute, Second. Total width 172px, centered at x=74 */
 HitRect ARROW_H_UP   = { 74.0f,  42.0f, 48.0f, 28.0f };
 HitRect ARROW_H_DOWN = { 74.0f, 112.0f, 48.0f, 28.0f };
 HitRect ARROW_M_UP   = { 136.0f,  42.0f, 48.0f, 28.0f };
@@ -68,7 +68,7 @@ HitRect ARROW_M_DOWN = { 136.0f, 112.0f, 48.0f, 28.0f };
 HitRect ARROW_S_UP   = { 198.0f,  42.0f, 48.0f, 28.0f };
 HitRect ARROW_S_DOWN = { 198.0f, 112.0f, 48.0f, 28.0f };
 
-/* Date arrows & buttons — initialized to EUR default (DD/MM/YYYY), dynamically updated by ui_update_date_hitboxes */
+/* Date arrows & buttons - initialized to EUR default (DD/MM/YYYY), dynamically updated by ui_update_date_hitboxes */
 HitRect ARROW_COL1_UP   = {  44.0f,  42.0f, 50.0f, 28.0f };
 HitRect ARROW_COL1_DOWN = {  44.0f, 112.0f, 50.0f, 28.0f };
 HitRect ARROW_COL2_UP   = { 114.0f,  42.0f, 50.0f, 28.0f };
@@ -114,7 +114,7 @@ const HitRect BTN_ALARM_DISMISS = {40.0f, 149.0f, 240.0f, 42.0f};
 const HitRect BTN_ALARM_MISSED_OK = {60.0f, 140.0f, 200.0f, 40.0f};
 const HitRect BTN_TIMER_DISMISS = {60.0f, 140.0f, 200.0f, 40.0f};
 
-/* Dedicated 2-Column Alarm Stepper Arrows — centered 2-column card layout */
+/* Dedicated 2-Column Alarm Stepper Arrows - centered 2-column card layout */
 const HitRect ARROW_ALARM_H_UP   = {  96.0f,  38.0f, 56.0f, 24.0f };
 const HitRect ARROW_ALARM_H_DOWN = {  96.0f,  98.0f, 56.0f, 24.0f };
 const HitRect ARROW_ALARM_M_UP   = { 168.0f,  38.0f, 56.0f, 24.0f };
@@ -1076,7 +1076,7 @@ void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
   draw_stepper_column_well(buf, ARROW_ALARM_M_UP.x, well_y, ARROW_ALARM_M_UP.w, well_h, str_m, 1.35f);
   draw_stepper_arrow_button(&ARROW_ALARM_M_DOWN, false);
 
-  /* 3. Ringtone Selector — Centered unit: [Tone:] [<] [ Value Container ] [>]
+  /* 3. Ringtone Selector - Centered unit: [Tone:] [<] [ Value Container ] [>]
    */
   C2D_Text txt_tone;
   C2D_TextParse(&txt_tone, buf, "Ringtone:");
@@ -1113,7 +1113,7 @@ void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
                BTN_ALARM_TONE_PREVIEW.y + (BTN_ALARM_TONE_PREVIEW.h - th_rn) / 2.0f, 0.0f, 0.50f,
                0.50f, CLR_TEXT);
 
-  /* 4. Repeat Selector — Centered unit: [Repeat:] [<] [ Value Container ] [>]
+  /* 4. Repeat Selector - Centered unit: [Repeat:] [<] [ Value Container ] [>]
    */
   C2D_Text txt_rep;
   C2D_TextParse(&txt_rep, buf, "Repeat:");
@@ -1155,7 +1155,7 @@ void ui_draw_alarm_edit(C2D_TextBuf buf, int h, int m, u8 repeat_mode,
                ALARM_SEL_REPEAT_Y + (ALARM_SEL_ROW_H - th_rm) / 2.0f, 0.0f,
                0.50f, 0.50f, CLR_TEXT);
 
-  /* 5. Label Input Row — [Label:] [ Text Box ] */
+  /* 5. Label Input Row - [Label:] [ Text Box ] */
   C2D_Text txt_lbl;
   C2D_TextParse(&txt_lbl, buf, "Label:");
   C2D_TextOptimize(&txt_lbl);
@@ -1764,7 +1764,7 @@ void ui_draw_settings_edit_date(C2D_TextBuf buf, int y, int m, int d,
   draw_stepper_arrow_button(&ARROW_COL3_DOWN, false);
   draw_stepper_sublabel(buf, ARROW_COL3_UP.x, ARROW_COL3_UP.w, label_y, l3);
 
-  /* Date format selector bar — pushed to bottom action row */
+  /* Date format selector bar - pushed to bottom action row */
   draw_stepper_arrow_button_horizontal(&BTN_FMT_LEFT, true);
   draw_stepper_arrow_button_horizontal(&BTN_FMT_RIGHT, false);
 
