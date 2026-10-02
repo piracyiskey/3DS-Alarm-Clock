@@ -13,7 +13,7 @@
 
 ### Alarm
 
-![Alarm List](https://github.com/user-attachments/assets/b9d24ae1-4ff6-4a8d-9ced-a2f06e19cb89) ![Alarm Settings](https://github.com/user-attachments/assets/f82ad30a-f7d2-46dc-9b3d-0642f1a0f1f0) ![Ringing](https://github.com/user-attachments/assets/f5d638a4-01af-4de9-98df-88e8e6d0a419)
+<img src="https://github.com/user-attachments/assets/b9d24ae1-4ff6-4a8d-9ced-a2f06e19cb89" alt="Alarm List" width="32%" /> <img src="https://github.com/user-attachments/assets/f82ad30a-f7d2-46dc-9b3d-0642f1a0f1f0" alt="Alarm Settings" width="32%" /> <img src="https://github.com/user-attachments/assets/f5d638a4-01af-4de9-98df-88e8e6d0a419" alt="Ringing" width="32%" />
 
 ### World Clock
 
@@ -25,16 +25,17 @@
 
 ### Timer
 
-![Timer](https://github.com/user-attachments/assets/bc8137b6-e600-49da-9883-8262ee3b417f) ![Timer Running](https://github.com/user-attachments/assets/5c7ed15f-351e-4294-b84b-b1f71575b64f) ![Timer Ringing](https://github.com/user-attachments/assets/2b5b7827-31e8-4ed6-9a8a-522f089eedd8) 
+<img src="https://github.com/user-attachments/assets/bc8137b6-e600-49da-9883-8262ee3b417f" alt="Timer" width="32%" /> <img src="https://github.com/user-attachments/assets/5c7ed15f-351e-4294-b84b-b1f71575b64f" alt="Timer Running" width="32%" /> <img src="https://github.com/user-attachments/assets/2b5b7827-31e8-4ed6-9a8a-522f089eedd8" alt="Timer Ringing" width="32%" />
 
 ### Settings
 
-![General](https://github.com/user-attachments/assets/591592a6-b552-4d53-8e3e-73bf1342f6ea) ![Display](https://github.com/user-attachments/assets/f9a92a29-74fa-42ba-9797-ca117884eb93) ![DateTime](https://github.com/user-attachments/assets/5e6821a4-7e6d-41e0-958d-06068f8a45dd)
+<img src="https://github.com/user-attachments/assets/591592a6-b552-4d53-8e3e-73bf1342f6ea" alt="General" width="32%" /> <img src="https://github.com/user-attachments/assets/f9a92a29-74fa-42ba-9797-ca117884eb93" alt="Display" width="32%" /> <img src="https://github.com/user-attachments/assets/5e6821a4-7e6d-41e0-958d-06068f8a45dd" alt="DateTime" width="32%" />
 
 ![Edit Time](https://github.com/user-attachments/assets/3ff1ee67-f0c4-45b2-a1dd-76b9eb79bde2) ![Edit Date](https://github.com/user-attachments/assets/eda20df9-e6f9-4065-9442-56aecc2d88f3)
 
 ### Manual and About
-![Manual 1](https://github.com/user-attachments/assets/b0adf8f4-7487-4fa9-9281-9234f18d5c23) ![Manual 2](https://github.com/user-attachments/assets/8f2a26d0-409a-48e5-9e97-07c1e43477cf) ![Credits](https://github.com/user-attachments/assets/13ea60ad-4830-483a-9372-11be69039fca)
+
+<img src="https://github.com/user-attachments/assets/b0adf8f4-7487-4fa9-9281-9234f18d5c23" alt="Manual 1" width="32%" /> <img src="https://github.com/user-attachments/assets/8f2a26d0-409a-48e5-9e97-07c1e43477cf" alt="Manual 2" width="32%" /> <img src="https://github.com/user-attachments/assets/13ea60ad-4830-483a-9372-11be69039fca" alt="Credits" width="32%" />
 
 <em> All screenshots were taken on Azahar Emulator, The quality is much better on real hardware.</em>
 
@@ -112,7 +113,7 @@ PocketClock features dual-input: Every action can be performed via touchscreen a
 
 ## Installation
 
-PocketClock is distributed in both `.cia` (installable title) and `.3dsx` (Homebrew Launcher) formats.
+Download the latest version of PocketClock from [Releases](https://github.com/piracyiskey/3DS-Alarm-Clock/releases). 
 
 ### Method 1: Installable CIA (`PocketClock.cia`) - Recommended
 1. Copy `PocketClock.cia` to your SD card.
@@ -121,10 +122,9 @@ PocketClock is distributed in both `.cia` (installable title) and `.3dsx` (Homeb
 4. Press <kbd>HOME</kbd> to unwrap PocketClock on your 3DS HOME Menu.
 
 ### Method 2: Homebrew Launcher (`PocketClock.3dsx`)
-1. Download `PocketClock.3dsx` and `PocketClock.smdh`.
-2. Copy `PocketClock.3dsx` to `sdmc:/3ds/PocketClock/PocketClock.3dsx`.
-3. Launch via the **Homebrew Launcher**.
-4. *(Optional)* Deploy wirelessly over local Wi-Fi from your PC using `3dslink`:
+1. Copy `PocketClock.3dsx` to `sdmc:/3ds/PocketClock/` (or `sdmc:/3ds/`) on your SD card.
+2. Launch **PocketClock** from the Homebrew Launcher.
+3. *(Optional)* You can also stream and run it wirelessly over local Wi-Fi from your PC using `3dslink`:
    ```powershell
    3dslink PocketClock.3dsx -a <3DS_IP_ADDRESS> -s
    ```
@@ -194,7 +194,7 @@ Upon a successful build, the following artifacts are generated:
 - [Nguyen Manh Dung](https://github.com/piracyiskey) - Lead developer, designer
 - [Icons8](https://icons8.com/) - Visual icon assets
 - [Pixabay](https://pixabay.com/) - Royalty-free alarm ringtones and sound effects
-- Banner and icon are hand drawn using [Adobe Illustrator](https://www.adobe.com/products/illustrator.html).
+- Banner and app icon are hand drawn by me using [Adobe Illustrator](https://www.adobe.com/products/illustrator.html).
 
 **Libraries & Tools:**
 - [libctru](https://github.com/devkitPro/libctru) - Core Nintendo 3DS homebrew OS and services library
