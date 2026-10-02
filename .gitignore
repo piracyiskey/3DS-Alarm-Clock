@@ -9,11 +9,13 @@ build/
 *.o
 *.d
 *.bin
+!data/*.bin
 *.lst
 *.map
 
-# Local assets
-assets/
+# Local assets (ignore raw audio sources, track required icons)
+assets/audios/
+!assets/icons/
 
 # AI agent instructions & rules
 .agents/
