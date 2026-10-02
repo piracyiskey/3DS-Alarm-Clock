@@ -174,19 +174,12 @@ You can build the project using the MSYS2 GNU Make executable included with devk
 
 * **Clean Build:** 
   ```powershell
-  Remove-Item -Recurse -Force build; & "C:\devkitPro\msys2\usr\bin\make.exe"
+  make clean; make
   ```
 * **Fast Build:**
   ```powershell
   make
   ```
-
-### 4. Build Outputs
-Upon a successful build, the following artifacts are generated:
-* `PocketClock.3dsx` - Homebrew Launcher executable. 
-* `PocketClock.cia` - Installable title.
-* `PocketClock.elf` - Executable and Linkable Format binary.
-* `PocketClock.smdh` - Title metadata and icon container.
 
 ## Credits
 
